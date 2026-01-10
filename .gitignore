@@ -13,3 +13,7 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+/AGENTS.md
+/CLAUDE.md
+backup.sql
+.env.docker.local

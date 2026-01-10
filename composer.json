@@ -12,8 +12,7 @@
         "laravel/sanctum": "^2.11",
         "laravel/tinker": "^2.5",
         "phpoffice/phpspreadsheet": "^1.29",
-        "spatie/data-transfer-object": "^3.8",
-        "spatie/laravel-medialibrary": "9",
+        "spatie/laravel-medialibrary": "^9.0",
         "tymon/jwt-auth": "^1.0"
     },
     "require-dev": {

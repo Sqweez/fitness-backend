@@ -14,8 +14,6 @@ class ClubSeeder extends Seeder
      */
     public function run()
     {
-        Club::updateOrCreate(['id' => 1], ['name' => 'Top Star Женская Студия']);
-        Club::updateOrCreate(['id' => 2], ['name' => 'Top Star Атриум']);
-        Club::updateOrCreate(['id' => 3], ['name' => 'Top Star Kids']);
+        Club::updateOrCreate(['id' => 1], ['name' => 'Тестовый клуб']);
     }
 }

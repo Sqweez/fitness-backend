@@ -1,0 +1,144 @@
+services:
+  # Nginx web server
+  nginx:
+    image: nginx:alpine
+    container_name: fitness-nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./:/var/www/html:delegated
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks:
+      - fitness-network
+
+  # PHP-FPM application server
+  php:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: fitness-php
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html:delegated
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - fitness-network
+
+  # MySQL database
+  mysql:
+    image: mysql:8.0
+    container_name: fitness-mysql
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-fitness}
+      MYSQL_USER: ${DB_USERNAME:-fitness}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - fitness-network
+
+  # Redis cache
+  redis:
+    image: redis:alpine
+    container_name: fitness-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - fitness-network
+
+  # Artisan command runner (for quick CLI commands)
+  artisan:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: fitness-artisan
+    volumes:
+      - ./:/var/www/html:delegated
+    depends_on:
+      - mysql
+      - redis
+    entrypoint: ["php", "artisan"]
+    networks:
+      - fitness-network
+    profiles:
+      - cli
+
+  # Composer package manager
+  composer:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: fitness-composer
+    volumes:
+      - ./:/var/www/html:delegated
+    entrypoint: ["composer"]
+    networks:
+      - fitness-network
+    profiles:
+      - cli
+
+  # Queue worker
+  queue:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: fitness-queue
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html:delegated
+    depends_on:
+      - mysql
+      - redis
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    networks:
+      - fitness-network
+    profiles:
+      - worker
+
+  # Scheduler (cron)
+  scheduler:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: fitness-scheduler
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html:delegated
+    depends_on:
+      - mysql
+      - redis
+    command: ["/bin/sh", "-c", "while true; do php artisan schedule:run --verbose --no-interaction & sleep 60; done"]
+    networks:
+      - fitness-network
+    profiles:
+      - worker
+
+networks:
+  fitness-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:

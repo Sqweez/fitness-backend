@@ -16,9 +16,6 @@ class CreateIndexesOnTimestampsSales extends Migration
         Schema::table('sales', function (Blueprint $table) {
             $table->index('created_at');
             $table->index('updated_at');
-            $table->index('user_id');
-            $table->index('client_id');
-            $table->index('club_id');
             $table->index('salable_id');
         });
     }
@@ -31,12 +28,9 @@ class CreateIndexesOnTimestampsSales extends Migration
     public function down()
     {
         Schema::table('sales', function (Blueprint $table) {
-            $table->dropIndex('created_at');
-            $table->dropIndex('updated_at');
-            $table->dropIndex('user_id');
-            $table->dropIndex('client_id');
-            $table->dropIndex('club_id');
-            $table->dropIndex('salable_id');
+            $table->dropIndex(['created_at']);
+            $table->dropIndex(['updated_at']);
+            $table->dropIndex(['salable_id']);
         });
     }
 }
