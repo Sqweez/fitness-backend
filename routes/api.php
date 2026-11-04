@@ -1,9 +1,5 @@
 <?php
 
-use App\Http\Controllers\mobile\v1\AuthController;
-use App\Http\Controllers\mobile\v1\ProfileController;
-use App\Http\Controllers\mobile\v1\ClientRequestController;
-use App\Models\Session;
 use App\Http\Controllers\api\v1\{ClientBookmarkController,
     ClientController,
     ClubController,
@@ -115,90 +111,6 @@ Route::group([
         Route::get('/price-history', [StatsController::class, 'getPriceSaleHistory']);
         Route::get('/wrong-birth', [StatsController::class, 'getWrongBirthDateClients']);
         Route::get('/unlimited-ending', [StatsController::class, 'getUnlimitedEndingClients']);
-    });
-});
-
-Route::prefix('mobile')->middleware([])->group(function () {
-    Route::prefix('v1')->group(function () {
-        Route::prefix('auth')->group(function () {
-            Route::get('/me', [AuthController::class, 'me']);
-            Route::post('/login', [AuthController::class, 'login'])->withoutMiddleware('auth:api');
-        });
-
-        Route::get('profile', [ProfileController::class, 'getMyProfile']);
-        Route::post('request', [ClientRequestController::class, 'store']);
-        Route::get('club/stats', function () {
-            return Session::query()
-                ->whereNull('finished_at')
-                ->today()
-                ->get()
-                ->groupBy('club_id')
-                ->map(function ($values, $club_id) {
-                    return [
-                        'club_id' => $club_id,
-                        'count' => is_countable($values) ? count($values) : 0,
-                    ];
-                })
-                ->values();
-        });
-
-        Route::get('club/contacts', function () {
-            return [
-                [
-                    'id' => 2,
-                    'name' => 'Top Star Atrium',
-                    'address' => 'Сатпаева 245/1, 3 этаж',
-                    'instagram' => 'atriumtopstar',
-                    'accentColor' => '#BBD620',
-                    'instagramLink' => 'https://www.instagram.com/atriumtopstar',
-                    'location' => null,
-                    'phone' => '+7 707 747 90 04',
-                    'lat' => '52.269389',
-                    'lon' => '76.943300',
-                    'map_url' => 'https://yandex.ru/map-widget/v1/?um=constructor%3A09fcfd09badf8c4f5c486d10120357c32800e71b2171eabf5f8e5d340c7cc40e&amp;source=constructor'
-                ],
-                [
-                    'id' => 3,
-                    'name' => 'Top Star Kids',
-                    'address' => 'Сатпаева 245/1, 3 этаж',
-                    'instagram' => 'topstar_kids',
-                    'accentColor' => '#FFD600',
-                    'instagramLink' => 'https://www.instagram.com/topstar_kids',
-                    'location' => null,
-                    'phone' => '+7 707 747 90 04',
-                    'lat' => '52.269389',
-                    'lon' => '76.943300',
-                    'map_url' => 'https://yandex.ru/map-widget/v1/?um=constructor%3Aa7d289124f5f0bf5ad20be3b705f77795b2dc135fcae2d4aae1ba6d33d8b785e&amp;source=constructor'
-                ],
-                [
-                    'id' => 1,
-                    'name' => 'Top Star Женская Студия',
-                    'address' => 'Машхура Жусупа 4/1',
-                    'instagram' => 'topstar_women',
-                    'accentColor' => '#FA00FF',
-                    'instagramLink' => 'https://www.instagram.com/topstar_women',
-                    'location' => null,
-                    'phone' => '+7 707 747 90 04',
-                    'lat' => '52.295652',
-                    'lon' => '76.950774',
-                    'map_url' => 'https://yandex.ru/map-widget/v1/?um=constructor%3A4185ae09a8a37724d4a95b93ee397f96c86e735ea7deb5bbe3401ba43622f6d9&amp;source=constructor'
-                ],
-            ];
-        });
-
-        Route::get('club/team', function (\Illuminate\Http\Request $request) {
-            $users = \App\Models\User::query()
-                ->where('is_active', true)
-                ->when($request->filled('club_id'), function ($query) use ($request) {
-                    return $query->whereHas('club', function ($q) use ($request) {
-                        return $q->where('id', $request->get('club_id'));
-                    });
-                })
-                ->with(['media'])
-                ->get();
-
-            return \App\Http\Resources\User\SingleUserResource::collection($users);
-        });
     });
 });
 

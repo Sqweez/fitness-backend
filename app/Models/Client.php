@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /**
  * App\Models\Client
@@ -110,7 +109,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
  * @property string|null $mobile_password
  * @method static Builder|Client whereMobilePassword($value)
  */
-class Client extends Authenticatable implements HasMedia, JWTSubject
+class Client extends Authenticatable implements HasMedia
 {
     use HasFactory, InteractsWithMedia;
 
@@ -298,13 +297,5 @@ class Client extends Authenticatable implements HasMedia, JWTSubject
                     Carbon::parse($sale['salable']['active_until'])->diffInDays(now()) >= Club::UNLIMITED_DAYS_BEFORE_DISCOUNT;
             })
             ->count() > 0;
-    }
-
-    public function getJWTIdentifier() {
-        // TODO: Implement getJWTIdentifier() method.
-    }
-
-    public function getJWTCustomClaims() {
-        // TODO: Implement getJWTCustomClaims() method.
     }
 }

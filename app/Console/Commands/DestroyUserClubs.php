@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class DestroyUserClubs extends Command
 {
@@ -36,19 +37,20 @@ class DestroyUserClubs extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         User::query()
-            ->with('clubs')
-            ->get()
-            ->each(function (User $user) {
-                if ($user->clubs->count() > 1) {
-                    $user->update(['club_id' => null]);
-                } else {
-                    $user->update([
-                        'club_id' => $user->clubs->first()->id,
-                    ]);
-                }
-            });
+            ->has('clubs', '>', 1)
+            ->whereNotNull('club_id')
+            ->update(['club_id' => null]);
+
+        $singleClubId = '(select clubs.id from clubs join club_user on club_user.club_id = clubs.id where club_user.user_id = users.id limit 1)';
+
+        User::query()
+            ->has('clubs', '=', 1)
+            ->whereRaw("not (club_id <=> {$singleClubId})")
+            ->update(['club_id' => DB::raw($singleClubId)]);
+
+        return self::SUCCESS;
     }
 }
