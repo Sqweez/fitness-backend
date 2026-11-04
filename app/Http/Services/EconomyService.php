@@ -107,7 +107,7 @@ class EconomyService {
     private function getClubGuestsReport($start, $finish): AnonymousResourceCollection {
         $sessions = Session::query()
             ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
-            ->with(['client', 'start_user', 'finish_user', 'club'])
+            ->with(['client:id,name', 'start_user:id,name', 'finish_user:id,name', 'club:id,name'])
             ->whereNotNull('finished_at')
             ->get();
         return ClubGuests::collection($sessions);
@@ -117,7 +117,7 @@ class EconomyService {
         $sales = Sale::query()
             ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
             ->where('salable_type', ServiceSale::class)
-            ->with(['client', 'user', 'club', 'salable.service', 'transaction'])
+            ->with(['client:id,name', 'user:id,name', 'club:id,name', 'salable.service', 'transaction'])
             ->get()
             ->groupBy(function (Sale $sale) {
                 return $sale->created_at->format('Y-m-d H:i:s');
@@ -146,7 +146,7 @@ class EconomyService {
     private function getNewClientsReport($start, $finish): AnonymousResourceCollection {
         $clients = Client::query()
             ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
-            ->with(['club', 'registrar'])
+            ->with(['club:id,name', 'registrar:id,name'])
             ->get();
         return NewClients::collection($clients);
     }
