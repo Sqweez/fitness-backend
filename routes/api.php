@@ -3,7 +3,6 @@
 use App\Http\Controllers\mobile\v1\AuthController;
 use App\Http\Controllers\mobile\v1\ProfileController;
 use App\Http\Controllers\mobile\v1\ClientRequestController;
-use App\Models\Client;
 use App\Models\Session;
 use App\Http\Controllers\api\v1\{ClientBookmarkController,
     ClientController,
@@ -24,92 +23,6 @@ use App\Http\Controllers\api\v1\{ClientBookmarkController,
     UserReportController,
     WithDrawalController};
 use Illuminate\Support\Facades\Route;
-
-Route::get('photo-csv', function () {
-    ini_set('memory_limit', '512M');
-    $query =  Client::query()
-        ->has('avatar')
-        ->with('avatar')
-        ->with('registrar:id,name')
-        ->withTrashed();
-    $filename = "users.csv";
-    $handle = fopen($filename, 'w+');
-    $headers = ['client_id', 'photo', 'fio', 'phone'];
-    fputcsv($handle, $headers);
-    $query
-        ->chunk(100, function ($clients) use (&$handle) {
-            foreach ($clients as $client) {
-                $array = [
-                    $client->id,
-                    $client->id . '.' . explode('.', $client->avatar->first()->file_name)[1],
-                    '',
-                    ''
-                ];
-                fputcsv($handle, $array, ";");
-            }
-        });
-
-    fclose($handle);
-
-    return response()->download($filename)->deleteFileAfterSend(true);
-});
-
-Route::get('photo-download', function () {
-    $sourceFolder = base_path('storage/excel');
-    $zipFileName = 'photo_' . time() . '.zip';
-    $zipFilePath = public_path($zipFileName);
-    $zip = new ZipArchive;
-
-    if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-        Client::query()
-            ->has('avatar')
-            ->with('avatar')
-            ->withTrashed()
-            ->orderBy('id')
-            ->cursor()
-            ->each(function ($client) use ($zip) {
-                $avatar = $client->avatar->first();
-                if ($avatar) {
-                    $filePath = $avatar->getPath();
-                    $newFileName = "{$client->id}." . pathinfo($filePath, PATHINFO_EXTENSION);
-                    $zip->addFile($filePath, $newFileName);
-                }
-            });
-        $zip->close();
-
-        // Возвращаем архив как ответ на скачивание
-        return response()->download($zipFilePath)->deleteFileAfterSend(true);
-    } else {
-        return response()->json(['error' => 'Failed to create archive'], 500);
-    }
-});
-
-Route::get('export', function () {
-    $sourceFolder = base_path('storage/excel');
-    // Создаем временное имя для архива
-    $zipFileName = 'excel_' . time() . '.zip';
-    $zipFilePath = public_path($zipFileName);
-
-    // Создаем объект ZipArchive
-    $zip = new ZipArchive;
-
-    if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-        // Рекурсивно добавляем все файлы из папки в архив
-        $files = File::allFiles($sourceFolder);
-
-        foreach ($files as $file) {
-            $relativePath = $file->getRelativePathname();
-            $zip->addFile($file->getRealPath(), $relativePath);
-        }
-
-        $zip->close();
-
-        // Возвращаем архив как ответ на скачивание
-        return response()->download($zipFilePath)->deleteFileAfterSend(true);
-    } else {
-        return response()->json(['error' => 'Failed to create archive'], 500);
-    }
-});
 
 Route::group([
     'prefix' => 'v1',
