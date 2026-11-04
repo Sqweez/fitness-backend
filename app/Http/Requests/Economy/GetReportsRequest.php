@@ -7,6 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class GetReportsRequest extends FormRequest
 {
+    private const MAX_RANGE_DAYS = 92;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -28,6 +30,24 @@ class GetReportsRequest extends FormRequest
             'start' => 'required',
             'finish' => 'required'
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $start = $this->start->copy()->startOfDay();
+            $finish = $this->finish->copy()->startOfDay();
+
+            if ($finish->lt($start)) {
+                $validator->errors()->add('finish', 'Конечная дата не может быть раньше начальной');
+            } elseif ($start->diffInDays($finish) > self::MAX_RANGE_DAYS) {
+                $validator->errors()->add('finish', 'Максимальный период: ' . self::MAX_RANGE_DAYS . ' дн.');
+            }
+        });
     }
 
     protected function prepareForValidation() {

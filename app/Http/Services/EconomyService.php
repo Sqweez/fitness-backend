@@ -33,23 +33,18 @@ class EconomyService {
         $finish = $dates['finish'];
         $clubs = Club::all();
         $data = ClientReplenishment::query()
-            ->whereDate('created_at', '>=', $start)
-            ->whereDate('created_at', '<=', $finish)
-            ->with('club:id,name')
+            ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
+            ->selectRaw('club_id, DATE(created_at) as day, SUM(amount) as total')
+            ->groupBy('club_id', 'day')
             ->get()
             ->groupBy('club_id');
 
         $ranges = collect(get_dates_range($start, $finish));
 
         $clubs = $clubs->map(function ($club) use ($data) {
-            $needleData = isset($data[$club->id]) ? collect($data[$club->id]) : collect([]);
-            $needleData = $needleData
-                ->groupBy(function ($i) {
-                    return Carbon::parse($i['created_at'])->format('Y-m-d');
-                })
-                ->map(function ($i) {
-                    return collect($i)->sum('amount');
-                });
+            $needleData = isset($data[$club->id])
+                ? $data[$club->id]->pluck('total', 'day')->map(fn ($total) => (int) $total)
+                : collect([]);
 
             return [
                 'id' => $club->id,
@@ -103,8 +98,7 @@ class EconomyService {
 
     private function getBalancesTopUpReport($start, $finish): AnonymousResourceCollection {
         $transactions = ClientReplenishment::query()
-            ->whereDate('created_at', '>=', $start)
-            ->whereDate('created_at', '<=', $finish)
+            ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
             ->with(['club:id,name', 'client:id,name', 'user:id,name'])
             ->get();
         return AccountTopUp::collection($transactions);
@@ -112,8 +106,7 @@ class EconomyService {
 
     private function getClubGuestsReport($start, $finish): AnonymousResourceCollection {
         $sessions = Session::query()
-            ->whereDate('created_at', '>=', $start)
-            ->whereDate('created_at', '<=', $finish)
+            ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
             ->with(['client', 'start_user', 'finish_user', 'club'])
             ->whereNotNull('finished_at')
             ->get();
@@ -122,8 +115,7 @@ class EconomyService {
 
     private function getProgramPurchasedReport($start, $finish) {
         $sales = Sale::query()
-            ->whereDate('created_at', '>=', $start)
-            ->whereDate('created_at', '<=', $finish)
+            ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
             ->where('salable_type', ServiceSale::class)
             ->with(['client', 'user', 'club', 'salable.service', 'transaction'])
             ->get()
@@ -153,8 +145,7 @@ class EconomyService {
 
     private function getNewClientsReport($start, $finish): AnonymousResourceCollection {
         $clients = Client::query()
-            ->whereDate('created_at', '>=', $start)
-            ->whereDate('created_at', '<=', $finish)
+            ->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($finish)->endOfDay()])
             ->with(['club', 'registrar'])
             ->get();
         return NewClients::collection($clients);
