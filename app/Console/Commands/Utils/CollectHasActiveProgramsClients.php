@@ -4,11 +4,12 @@ namespace App\Console\Commands\Utils;
 
 use App\Models\Client;
 use App\Models\ServiceSale;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class CollectHasActiveProgramsClients extends Command
 {
+    private const EXCLUDED_SERVICE_IDS = [176, 148];
+
     /**
      * The name and signature of the console command.
      *
@@ -43,30 +44,17 @@ class CollectHasActiveProgramsClients extends Command
         Client::query()
             ->update(['has_active_programs' => false]);
 
-        $clients = Client::query()
-            ->select(['id'])
-            ->whereHas('programs', function ($q) {
-                return $q
-                    ->whereHasMorph('salable', [ServiceSale::class], function ($q) {
-                        return $q->whereDate('active_until', '>=', today());
-                    });
-            })
-            ->with('programs.salable')
-            ->get();
-
-        $clients = $clients->filter(function (Client $client) {
-            $activePrograms = $client->programs->filter(function ($program) {
-                return ($program->salable->active_until !== null ||
-                        Carbon::parse($program->salable->active_until)->gte(today())) &&
-                    !in_array($program->salable->service_id, [176, 148]);
-            });
-            return $activePrograms->count() > 0;
-        })->values()->map(function (Client $client) {
-            return $client->id;
-        });
-
         Client::query()
-            ->whereIn('id', $clients)
+            ->whereHas('programs', function ($programs) {
+                $programs->whereHasMorph('salable', [ServiceSale::class], function ($serviceSale) {
+                    $serviceSale->whereDate('active_until', '>=', today());
+                });
+            })
+            ->whereHas('programs', function ($programs) {
+                $programs->whereHasMorph('salable', [ServiceSale::class], function ($serviceSale) {
+                    $serviceSale->whereNotIn('service_id', self::EXCLUDED_SERVICE_IDS);
+                });
+            })
             ->update(['has_active_programs' => true]);
 
         return 0;

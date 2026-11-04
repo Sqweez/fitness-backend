@@ -42,11 +42,12 @@ class FinishClientSessions extends Command
      */
     public function handle()
     {
-        Client::query()
+        $clients = Client::query()
             ->has('active_session')
-            ->get()
-            ->each(function ($client) {
-                $this->service->finish($client);
-            });
+            ->cursor();
+
+        foreach ($clients as $client) {
+            $this->service->finish($client);
+        }
     }
 }
