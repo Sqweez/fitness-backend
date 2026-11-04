@@ -5,20 +5,19 @@ namespace App\Http\Services;
 use App\Http\Resources\Economy\AccountTopUp;
 use App\Http\Resources\Economy\ClubGuests;
 use App\Http\Resources\Economy\NewClients;
-use App\Http\Resources\Economy\PurchasedPrograms;
 use App\Models\Client;
 use App\Models\ClientReplenishment;
 use App\Models\Club;
 use App\Models\Sale;
 use App\Models\ServiceSale;
 use App\Models\Session;
-use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class EconomyService {
 
-    public function getReports($dates) {
+    public function getReports($dates): array
+    {
         $start = $dates['start'];
         $finish = $dates['finish'];
         return [

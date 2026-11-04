@@ -4,7 +4,6 @@ namespace App\Http\Services;
 
 use App\Models\Client;
 use App\Models\ClientCustomService;
-use App\Models\CustomService;
 use App\Models\SessionService;
 use App\Models\Trinket;
 use Illuminate\Database\Eloquent\Model;
