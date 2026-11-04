@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\api\v2\EconomyReportController;
 use App\Http\Controllers\api\v1\{ClientBookmarkController,
     ClientController,
     ClubController,
@@ -111,6 +112,18 @@ Route::group([
         Route::get('/price-history', [StatsController::class, 'getPriceSaleHistory']);
         Route::get('/wrong-birth', [StatsController::class, 'getWrongBirthDateClients']);
         Route::get('/unlimited-ending', [StatsController::class, 'getUnlimitedEndingClients']);
+    });
+});
+
+Route::group([
+    'prefix' => 'v2',
+    'middleware' => 'auth:api'
+], function () {
+    Route::group(['prefix' => 'economy'], function () {
+        Route::get('top-ups', [EconomyReportController::class, 'topUps']);
+        Route::get('programs', [EconomyReportController::class, 'programs']);
+        Route::get('guests', [EconomyReportController::class, 'guests']);
+        Route::get('new-clients', [EconomyReportController::class, 'newClients']);
     });
 });
 
