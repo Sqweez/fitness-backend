@@ -3,6 +3,9 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -41,6 +44,22 @@ class Handler extends ExceptionHandler
     }
 
     public function render($request, Throwable $e) {
+        if ($request->is('api/mobile/v1/*')) {
+            if ($e instanceof ValidationException) {
+                return response()->json(['error' => ['code' => 'VALIDATION_ERROR', 'message' => $e->validator->errors()->first()]], 422);
+            }
+            if ($e instanceof AuthenticationException) {
+                return response()->json(['error' => ['code' => 'UNAUTHORIZED', 'message' => 'Необходима авторизация']], 401);
+            }
+            if ($e instanceof ThrottleRequestsException || $e instanceof LockTimeoutException) {
+                $retryAfter = $e instanceof ThrottleRequestsException ? (int) $e->getHeaders()['Retry-After'] : 1;
+                return response()->json(['error' => [
+                    'code' => 'RATE_LIMITED',
+                    'message' => 'Слишком много запросов. Попробуйте позже',
+                    'retry_after_seconds' => $retryAfter,
+                ]], 429)->header('Retry-After', $retryAfter);
+            }
+        }
         if ($e instanceof ValidationException)
             return response()->json([
                 'message' => __hardcoded('Переданы неверные данные!'),
