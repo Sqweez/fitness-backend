@@ -224,6 +224,20 @@ class MobileAuthTest extends TestCase
         $this->withToken($token)->getJson('/api/v1/clients')->assertStatus(401);
     }
 
+    public function test_docs_openapi_yaml_is_served_publicly(): void {
+        $response = $this->get('/api/mobile/v1/docs/openapi.yaml');
+        $response->assertOk();
+        $this->assertStringContainsString('text/yaml', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('Gladiators Mobile API', $response->getContent());
+    }
+
+    public function test_docs_swagger_ui_is_served_publicly(): void {
+        $response = $this->get('/api/mobile/v1/docs');
+        $response->assertOk();
+        $this->assertStringContainsString('text/html', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('swagger-ui', $response->getContent());
+    }
+
     private function client(string $phone = '+77011234567'): Client {
         return Client::create(['name' => 'Иванов Алексей Иванович', 'phone' => $phone]);
     }
