@@ -1,0 +1,297 @@
+openapi: 3.0.3
+info:
+  title: Gladiators Mobile API
+  description: Контракт мобильного API спортивного клуба Gladiators (префикс /api/mobile/v1).
+  version: 1.0.0
+
+servers:
+  - url: https://api.gladiatory.ariesdev.kz/api/mobile/v1
+    description: Production / Staging
+  - url: http://localhost:8080/api/mobile/v1
+    description: Local Docker
+  - url: http://127.0.0.1:8000/api/mobile/v1
+    description: Local Artisan Serve
+
+paths:
+  /auth/code:
+    post:
+      summary: Запрос кода подтверждения
+      description: |
+        Отправляет SMS/мессенджер код существующему клиенту клуба (пока заглушка на 111111).
+        Действует 5 минут. Повторный запрос не сбрасывает счётчик попыток.
+      operationId: sendAuthCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+      responses:
+        '200':
+          description: Код успешно запрошен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendCodeResponse'
+        '404':
+          description: Клиент с таким номером не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: PHONE_NOT_FOUND
+                  message: Клиент с таким номером телефона не найден
+        '409':
+          description: Номер дублируется у нескольких клиентов в базе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: PHONE_AMBIGUOUS
+                  message: Обратитесь к администратору для уточнения номера
+        '422':
+          description: Ошибка валидации формата телефона
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: The phone format is invalid.
+        '429':
+          description: Превышен лимит запросов (cooldown 60 сек, 3/час, 5/сутки или IP throttle)
+          headers:
+            Retry-After:
+              description: Количество секунд до следующей попытки
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+              example:
+                error:
+                  code: RATE_LIMITED
+                  message: Слишком много попыток. Попробуйте позже
+                  retry_after_seconds: 60
+
+  /auth/verify:
+    post:
+      summary: Проверка кода и выдача токена
+      description: |
+        Проверяет 6-значный код. При успехе возвращает бессрочный Bearer-токен Sanctum.
+        Максимум 5 неверных попыток, после чего блокируется до истечения 5-минутного запроса.
+      operationId: verifyAuthCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCodeRequest'
+      responses:
+        '200':
+          description: Успешная авторизация, токен выдан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyCodeResponse'
+        '404':
+          description: Клиент с таким номером не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: PHONE_NOT_FOUND
+                  message: Клиент с таким номером телефона не найден
+        '409':
+          description: Конфликт владельца номера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: PHONE_AMBIGUOUS
+                  message: Обратитесь к администратору для уточнения номера
+        '422':
+          description: Неверный или истёкший код, либо ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidCode:
+                  summary: Неверный код
+                  value:
+                    error:
+                      code: INVALID_CODE
+                      message: Неверный код подтверждения
+                codeExpired:
+                  summary: Код истёк или уже использован
+                  value:
+                    error:
+                      code: CODE_EXPIRED
+                      message: Срок действия кода истёк
+                validationError:
+                  summary: Невалидный формат полей
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: The code format is invalid.
+        '429':
+          description: Блокировка после 5 неверных попыток
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+              example:
+                error:
+                  code: RATE_LIMITED
+                  message: Слишком много попыток. Попробуйте позже
+                  retry_after_seconds: 240
+
+  /auth/logout:
+    post:
+      summary: Выход из профиля
+      description: Отзывает текущий токен клиента. Другие устройства/токены остаются активными.
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Успешный выход, токен удалён (тело пустое)
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  schemas:
+    ErrorCode:
+      type: string
+      description: Символьный код ошибки для клиентской логики
+      enum:
+        - PHONE_NOT_FOUND
+        - PHONE_AMBIGUOUS
+        - INVALID_CODE
+        - CODE_EXPIRED
+        - VALIDATION_ERROR
+        - RATE_LIMITED
+        - UNAUTHORIZED
+
+    SendCodeRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          pattern: '^\+77[0-9]{9}$'
+          example: '+77011234567'
+          description: Номер телефона в формате +77XXXXXXXXX (11 цифр)
+
+    SendCodeResponse:
+      type: object
+      required:
+        - code_length
+        - retry_after_seconds
+      properties:
+        code_length:
+          type: integer
+          example: 6
+          description: Длина ожидаемого проверочного кода
+        retry_after_seconds:
+          type: integer
+          example: 60
+          description: Минимальная пауза в секундах до возможности повторного запроса
+
+    VerifyCodeRequest:
+      type: object
+      required:
+        - phone
+        - code
+      properties:
+        phone:
+          type: string
+          pattern: '^\+77[0-9]{9}$'
+          example: '+77011234567'
+          description: Номер телефона в формате +77XXXXXXXXX
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          example: '111111'
+          description: 6-значный цифровой проверочный код
+
+    VerifyCodeResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          example: '1|4A89fbc789e0...'
+          description: Бессрочный Bearer-токен Sanctum для последующих запросов
+
+    ApiError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              $ref: '#/components/schemas/ErrorCode'
+            message:
+              type: string
+              example: Сообщение об ошибке на русском языке
+
+    RateLimitError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - retry_after_seconds
+          properties:
+            code:
+              type: string
+              enum: [RATE_LIMITED]
+            message:
+              type: string
+              example: Слишком много попыток. Попробуйте позже
+            retry_after_seconds:
+              type: integer
+              example: 60
+              description: Количество секунд ожидания до следующего разрешенного запроса
