@@ -18,3 +18,4 @@ yarn-error.log
 /CLAUDE.md
 backup.sql
 .env.docker.local
+.env.production

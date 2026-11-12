@@ -16,7 +16,7 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Tymon\JWTAuth\Contracts\JWTSubject;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * App\Models\User
@@ -89,9 +89,9 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
  * @method static Builder|User whereIsActive($value)
  * @method static Builder|User active()
  */
-class User extends Authenticatable implements JWTSubject, HasMedia
+class User extends Authenticatable implements HasMedia
 {
-    use HasFactory, Notifiable, SoftDeletes, HasPass, InteractsWithMedia, HasPass;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasPass, InteractsWithMedia, HasPass;
 
     protected static function boot() {
         parent::boot();
@@ -251,11 +251,4 @@ class User extends Authenticatable implements JWTSubject, HasMedia
             || $this->roles->contains('id', Role::ROLE_SELLER);
     }
 
-    public function getJWTIdentifier() {
-        return $this->getKey();
-    }
-
-    public function getJWTCustomClaims(): array {
-        return [];
-    }
 }

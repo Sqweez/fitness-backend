@@ -1,0 +1,114 @@
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+x-php: &php
+  image: ghcr.io/sqweez/fitness-backend-php:latest
+  platform: linux/amd64
+  build:
+    context: .
+    dockerfile: docker/production/Dockerfile
+    target: app
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  environment:
+    APP_ENV: production
+    APP_DEBUG: 'false'
+    APP_URL: ${APP_URL:?Set APP_URL}
+    DB_CONNECTION: mysql
+    DB_HOST: db
+    DB_PORT: '3306'
+    DB_SOCKET: ''
+    DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE}
+    DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+    DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    CACHE_DRIVER: file
+    SESSION_DRIVER: file
+    QUEUE_CONNECTION: sync
+    BROADCAST_DRIVER: log
+    TELESCOPE_ENABLED: 'false'
+    LOG_CHANNEL: stderr
+  volumes:
+    - storage:/var/www/html/storage
+    - type: bind
+      source: ${APP_ENV_FILE:?Set APP_ENV_FILE}
+      target: /var/www/html/.env
+      read_only: true
+      bind:
+        create_host_path: false
+  depends_on:
+    db:
+      condition: service_healthy
+  logging: *logging
+
+services:
+  php:
+    <<: *php
+    mem_limit: 1g
+    cpus: 1.0
+
+  nginx:
+    image: ghcr.io/sqweez/fitness-backend-nginx:latest
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: web
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - '127.0.0.1:${APP_PORT:?Set APP_PORT}:8080'
+    volumes:
+      - storage:/var/www/html/storage:ro
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx:uid=101,gid=101
+    depends_on:
+      php:
+        condition: service_started
+    mem_limit: 64m
+    cpus: 0.5
+    logging: *logging
+
+  db:
+    image: mariadb:10.2.44
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?Set DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME:?Set DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD}
+      TZ: Etc/GMT-5
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+05:00
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=tcp -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" -Nse "SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 20
+    mem_limit: 512m
+    cpus: 1.0
+    logging: *logging
+
+  scheduler:
+    <<: *php
+    profiles: [scheduler]
+    command: [php, artisan, schedule:work, --no-interaction]
+    mem_limit: 256m
+    cpus: 0.5
+
+volumes:
+  database:
+  storage:
