@@ -121,9 +121,6 @@ copy-env: ## Copy .env.docker or .env.example to .env
 key-generate: ## Generate application key
 	docker compose run --rm artisan key:generate
 
-jwt-secret: ## Generate JWT secret
-	docker compose run --rm artisan jwt:secret
-
 ide-helper: ## Generate IDE helper files
 	docker compose run --rm artisan ide-helper:generate
 

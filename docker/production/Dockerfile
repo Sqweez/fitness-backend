@@ -41,4 +41,4 @@ RUN composer install --prefer-dist --no-interaction --no-progress --no-scripts \
     && composer dump-autoload --optimize --no-interaction --no-scripts \
     && chown -R app:app storage bootstrap/cache
 USER app
-CMD ["php", "vendor/bin/phpunit", "--do-not-cache-result", "--filter", "Mobile|Trainer|Timezone"]
+CMD ["php", "vendor/bin/phpunit", "--do-not-cache-result", "--filter", "StaffAuth|Mobile|Trainer|Timezone"]
