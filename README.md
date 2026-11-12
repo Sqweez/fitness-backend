@@ -40,7 +40,6 @@ cp .env.example .env
 
 # Сгенерировать ключи
 php artisan key:generate
-php artisan jwt:secret
 
 # Запустить миграции
 php artisan migrate --seed
@@ -81,7 +80,7 @@ make help            # Все команды
 
 ### Аутентификация
 
-JWT токен. Передавать в заголовке:
+Токен Laravel Sanctum. Передавать в заголовке:
 ```
 Authorization: Bearer <token>
 ```
@@ -128,7 +127,7 @@ docker/
 ## Технологии
 
 - **Framework:** Laravel 8
-- **Auth:** JWT (tymon/jwt-auth)
+- **Auth:** Laravel Sanctum, раздельные guards для сотрудников и клиентов
 - **Media:** Spatie Media Library
 - **DTO:** Spatie Data Transfer Object
 - **Dev:** Laravel Telescope, IDE Helper
