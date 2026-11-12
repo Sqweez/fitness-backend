@@ -264,6 +264,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /me/trinket:
+    get:
+      summary: Выданный ключ от шкафчика
+      description: |
+        Возвращает номер шкафчика по ключу, привязанному к незавершённому посещению владельца токена.
+        Если ключ не выдан или посещение завершено, data=null.
+        Номер шкафчика возвращается строкой; код брелока не передаётся.
+      operationId: getMyTrinket
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Номер шкафчика или отсутствие выданного ключа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrinketResponse'
+              examples:
+                assigned:
+                  value:
+                    data:
+                      number: '17'
+                notAssigned:
+                  value:
+                    data: null
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -272,6 +319,24 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    TrinketResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Trinket'
+
+    Trinket:
+      type: object
+      nullable: true
+      required:
+        - number
+      properties:
+        number:
+          type: string
+          example: '17'
+
     MembershipsResponse:
       type: object
       required:

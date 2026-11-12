@@ -4,6 +4,8 @@ namespace App\Http\Services;
 
 use App\Models\Client;
 use App\Models\Sale;
+use App\Models\Trinket;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class MobileClientService
@@ -29,5 +31,11 @@ class MobileClientService
             })
             ->pluck('salable')
             ->values();
+    }
+
+    public function getTrinket(Client $client): ?Trinket {
+        return Trinket::query()->whereHas('sessions', function (Builder $query) use ($client) {
+            $query->where('client_id', $client->id)->whereNull('finished_at');
+        })->first();
     }
 }

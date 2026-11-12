@@ -22,6 +22,7 @@ Route::group(['prefix' => 'mobile/v1'], function () {
         Route::group(['prefix' => 'me'], function () {
             Route::get('/', [ClientController::class, 'me']);
             Route::get('membership', [ClientController::class, 'membership']);
+            Route::get('trinket', [ClientController::class, 'trinket']);
         });
     });
 });
