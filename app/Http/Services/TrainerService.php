@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class TrainerService
 {
@@ -51,6 +52,15 @@ class TrainerService
             return;
         }
 
-        $trainer->addMedia($data['photo'])->toMediaCollection(Trainer::MEDIA_PHOTO);
+        $existingIds = $trainer->getMedia(Trainer::MEDIA_PHOTO)->pluck('id')->all();
+        try {
+            $trainer->addMedia($data['photo'])->toMediaCollection(Trainer::MEDIA_PHOTO);
+        } catch (Throwable $exception) {
+            $trainer->unsetRelation('media');
+            foreach ($trainer->getMedia(Trainer::MEDIA_PHOTO)->whereNotIn('id', $existingIds) as $media) {
+                $media->delete();
+            }
+            throw $exception;
+        }
     }
 }

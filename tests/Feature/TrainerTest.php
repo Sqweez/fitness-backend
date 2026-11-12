@@ -165,6 +165,30 @@ class TrainerTest extends TestCase
         $this->getJson('/api/mobile/v1/trainers')->assertOk()->assertJsonPath('data.0.photo_url', $url);
     }
 
+    public function test_failed_photo_conversion_rolls_back_records_and_preserves_existing_files(): void {
+        $this->loginStaff(Role::ROLE_ADMIN);
+        $validPhoto = UploadedFile::fake()->image('valid.jpg');
+        $content = substr(file_get_contents($validPhoto->getPathname()), 0, 100);
+        $brokenPhoto = UploadedFile::fake()->createWithContent('broken.jpg', $content);
+        $this->assertSame('image/jpeg', $brokenPhoto->getMimeType());
+        $this->post('/api/v1/trainers', $this->payload() + ['photo' => $brokenPhoto], ['Accept' => 'application/json'])->assertStatus(500);
+        $this->assertDatabaseCount('trainers', 0);
+        $this->assertDatabaseCount('media', 0);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+
+        $id = $this->post('/api/v1/trainers', $this->payload() + ['photo' => $validPhoto], ['Accept' => 'application/json'])
+            ->assertCreated()->json('data.id');
+        $files = Storage::disk('public')->allFiles();
+        $this->post('/api/v1/trainers/' . $id, [
+            '_method' => 'PATCH',
+            'first_name' => 'Иван',
+            'photo' => UploadedFile::fake()->createWithContent('broken.jpg', $content),
+        ], ['Accept' => 'application/json'])->assertStatus(500);
+        $this->assertDatabaseCount('media', 1);
+        $this->assertSame($files, Storage::disk('public')->allFiles());
+        $this->assertDatabaseHas('trainers', ['id' => $id, 'first_name' => 'Александр']);
+    }
+
     public function test_deleting_a_trainer_removes_its_photo(): void {
         $this->loginStaff(Role::ROLE_BOSS);
         $id = $this->post('/api/v1/trainers', $this->payload() + ['photo' => UploadedFile::fake()->image('photo.jpg')], ['Accept' => 'application/json'])

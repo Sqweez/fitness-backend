@@ -428,6 +428,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /trainers:
+    get:
+      summary: Список тренеров клуба
+      description: |
+        Возвращает отдельный справочник тренеров, не связанный с учётными записями сотрудников.
+        Включаются только видимые тренеры (is_active=true), по возрастанию sort_order, затем ID.
+        photo_url указывает на готовое изображение 600x600 или равен null, если фото не загружено.
+        Отсутствие тренеров — успешный ответ с data=[].
+      operationId: getTrainers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Тренеры в порядке отображения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainersResponse'
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -436,6 +476,43 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    TrainersResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trainer'
+
+    Trainer:
+      type: object
+      required:
+        - id
+        - first_name
+        - last_name
+        - specialization
+        - photo_url
+      properties:
+        id:
+          type: string
+          example: '1'
+        first_name:
+          type: string
+          example: Александр
+        last_name:
+          type: string
+          example: Волков
+        specialization:
+          type: string
+          example: Силовые тренировки
+        photo_url:
+          type: string
+          format: uri
+          nullable: true
+          example: 'https://api.gladiatory.ariesdev.kz/storage/1/conversions/trainer-mobile.jpg'
+
     VisitsResponse:
       type: object
       required:
