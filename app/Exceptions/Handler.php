@@ -67,6 +67,11 @@ class Handler extends ExceptionHandler
                 'success' => false,
                 'invalid' => true,
             ], 422);
+        if ($e instanceof AuthenticationException && $request->expectsJson())
+            return response()->json([
+                'message' => __hardcoded('Необходима авторизация'),
+                'success' => false,
+            ], 401);
         return parent::render($request, $e);
     }
 }
