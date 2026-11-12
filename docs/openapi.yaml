@@ -360,6 +360,74 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /me/visits:
+    get:
+      summary: История посещений клиента
+      description: |
+        Возвращает открытые и завершённые посещения владельца токена по убыванию ID.
+        cursor=0 означает первую страницу. Для следующей страницы передайте next_cursor без изменений.
+        Курсор — числовой ID последней записи страницы, а не смещение.
+        Новые посещения между запросами не сдвигают следующие страницы.
+        На последней странице next_cursor=null. Для главного экрана используйте limit=3.
+      operationId: getMyVisits
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Размер страницы
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          description: ID последнего посещения предыдущей страницы; 0 для первой страницы
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Страница посещений; пустая история — успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitsResponse'
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+        '422':
+          description: Некорректный размер страницы или курсор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Некорректные параметры страницы
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -368,6 +436,43 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    VisitsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - items
+            - next_cursor
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Visit'
+            next_cursor:
+              type: integer
+              format: int64
+              nullable: true
+              minimum: 1
+              example: 123
+
+    Visit:
+      type: object
+      required:
+        - id
+        - at
+      properties:
+        id:
+          type: string
+          example: '123'
+        at:
+          type: string
+          format: date-time
+          description: Время начала посещения с часовым поясом
+          example: '2026-10-22T17:00:00+05:00'
+
     PassResponse:
       type: object
       required:

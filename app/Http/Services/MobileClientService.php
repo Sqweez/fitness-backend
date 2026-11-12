@@ -51,4 +51,19 @@ class MobileClientService
 
         return $pass;
     }
+
+    public function getVisits(Client $client, int $limit, int $cursor): array {
+        $visits = $client->sessions()
+            ->when($cursor > 0, function (Builder $query) use ($cursor) {
+                $query->where('id', '<', $cursor);
+            })
+            ->limit($limit + 1)
+            ->get(['id', 'created_at']);
+        $items = $visits->take($limit)->values();
+
+        return [
+            'items' => $items,
+            'next_cursor' => $visits->count() > $limit ? (int) $items->last()->id : null,
+        ];
+    }
 }
