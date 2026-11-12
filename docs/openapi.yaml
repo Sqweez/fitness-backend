@@ -183,6 +183,87 @@ paths:
                   code: UNAUTHORIZED
                   message: Необходима авторизация
 
+  /me:
+    get:
+      summary: Профиль авторизованного клиента
+      description: |
+        Возвращает имя и фамилию владельца мобильного токена.
+        Фамилия — первое слово существующего поля name, имя — второе.
+        Отчество не включается. ID клиента передавать не требуется.
+      operationId: getMyProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Имя и фамилия клиента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientProfileResponse'
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+  /me/membership:
+    get:
+      summary: Текущие абонементы клиента
+      description: |
+        Возвращает все текущие программы и безлимиты владельца токена от новых покупок к старым.
+        Истёкшие и полностью использованные абонементы, а также солярий не включаются.
+        Замороженные абонементы остаются в списке, даже если исходная дата окончания прошла.
+        Замороженные и ещё не активированные абонементы имеют active=false.
+        Остаток учитывает посещения и подтверждённые штрафные списания.
+        message отображается приложением, только если нет ни одного активного абонемента.
+      operationId: getMyMemberships
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Список текущих абонементов; отсутствие абонементов — успешный ответ с пустым массивом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipsResponse'
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -191,6 +272,91 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    MembershipsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/MembershipsData'
+
+    MembershipsData:
+      type: object
+      required:
+        - memberships
+        - message
+      properties:
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Membership'
+        message:
+          type: string
+          example: Поможем выбрать подходящий тариф. Напишите администратору или оформите абонемент на ресепшене клуба.
+
+    Membership:
+      type: object
+      required:
+        - id
+        - title
+        - active
+        - limited
+        - visits_left
+        - visits_total
+        - valid_until
+      properties:
+        id:
+          type: string
+          description: ID купленного абонемента
+          example: '123'
+        title:
+          type: string
+          example: Тренажёрный зал
+        active:
+          type: boolean
+          description: Возможность использовать абонемент по текущим правилам клуба
+          example: true
+        limited:
+          type: boolean
+          example: true
+        visits_left:
+          type: integer
+          nullable: true
+          description: Остаток посещений; null для безлимита
+          example: 12
+        visits_total:
+          type: integer
+          nullable: true
+          description: Начальное количество посещений; null для безлимита
+          example: 16
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: Конец последнего дня действия; null до активации
+          example: '2026-11-23T23:59:59+05:00'
+
+    ClientProfileResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/ClientProfile'
+
+    ClientProfile:
+      type: object
+      required:
+        - first_name
+        - last_name
+      properties:
+        first_name:
+          type: string
+          example: Алексей
+        last_name:
+          type: string
+          example: Иванов
+
     ErrorCode:
       type: string
       description: Символьный код ошибки для клиентской логики

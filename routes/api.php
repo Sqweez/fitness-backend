@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\api\v2\EconomyReportController;
-use App\Http\Controllers\api\v1\{ClientBookmarkController,
+use App\Http\Controllers\Api\V2\EconomyReportController;
+use App\Http\Controllers\Api\V1\{ClientBookmarkController,
     ClientController,
     ClubController,
     DashboardController,

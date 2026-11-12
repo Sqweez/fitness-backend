@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Services;
+
+use App\Models\Client;
+use App\Models\Sale;
+use Illuminate\Support\Collection;
+
+class MobileClientService
+{
+    public function getProfile(Client $client): array {
+        $name = preg_split('/\s+/u', trim($client->name));
+
+        return [
+            'first_name' => $name[1],
+            'last_name' => $name[0],
+        ];
+    }
+
+    public function getMemberships(Client $client): Collection {
+        return $client->programs()
+            ->with(['salable.service', 'salable.visits', 'salable.penalties', 'salable.active_stop'])
+            ->orderByDesc('id')
+            ->get()
+            ->filter(function (Sale $sale) {
+                $program = $sale->salable;
+                return (!$program->is_expired || $program->is_stopped)
+                    && ($program->is_unlimited || $program->remaining_visits > 0);
+            })
+            ->pluck('salable')
+            ->values();
+    }
+}
