@@ -38,6 +38,7 @@ class MobileMembershipTest extends TestCase
             $table->integer('entries_count')->nullable();
             $table->string('self_name')->nullable();
             $table->dateTime('active_until')->nullable();
+            $table->dateTime('activated_at')->nullable();
             $table->timestamps();
         });
         Schema::create('sales', function (Blueprint $table) {
@@ -71,7 +72,9 @@ class MobileMembershipTest extends TestCase
 
     public function test_no_memberships_returns_an_empty_list_and_message(): void {
         $response = $this->memberships($this->client())->assertOk();
+        $response->assertJsonStructure(['data' => ['memberships', 'last_membership', 'message']]);
         $response->assertJsonPath('data.memberships', []);
+        $response->assertJsonPath('data.last_membership', null);
         $this->assertNotEmpty($response->json('data.message'));
     }
 
@@ -84,6 +87,7 @@ class MobileMembershipTest extends TestCase
         $this->memberships($client)->assertOk()->assertJsonCount(2, 'data.memberships')
             ->assertJsonPath('data.memberships.0.id', (string) $unlimited->id)
             ->assertJsonPath('data.memberships.0.active', true)
+            ->assertJsonPath('data.memberships.0.status', 'active')
             ->assertJsonPath('data.memberships.0.limited', false)
             ->assertJsonPath('data.memberships.0.visits_left', null)
             ->assertJsonPath('data.memberships.0.visits_total', null)
@@ -116,9 +120,143 @@ class MobileMembershipTest extends TestCase
         $this->memberships($client)->assertOk()->assertJsonCount(2, 'data.memberships')
             ->assertJsonPath('data.memberships.0.id', (string) $unactivated->id)
             ->assertJsonPath('data.memberships.0.active', false)
+            ->assertJsonPath('data.memberships.0.status', 'pending_activation')
             ->assertJsonPath('data.memberships.0.valid_until', null)
             ->assertJsonPath('data.memberships.1.id', (string) $frozen->id)
-            ->assertJsonPath('data.memberships.1.active', false);
+            ->assertJsonPath('data.memberships.1.active', false)
+            ->assertJsonPath('data.memberships.1.status', 'frozen')
+            ->assertJsonPath('data.last_membership', null);
+    }
+
+    public function test_current_memberships_are_ordered_by_status_then_latest_purchase(): void {
+        $client = $this->client();
+        $active = $this->program($client);
+        $pending = $this->program($client, ['active_until' => null]);
+        $frozen = $this->program($client);
+        StopCard::create(['service_sale_id' => $frozen->id, 'is_active' => true]);
+        $newActive = $this->program($client);
+        $this->program($client, ['active_until' => today()->subDay()->toDateTimeString()]);
+
+        $this->memberships($client)->assertOk()->assertJsonCount(4, 'data.memberships')
+            ->assertJsonPath('data.memberships.0.id', (string) $newActive->id)
+            ->assertJsonPath('data.memberships.1.id', (string) $active->id)
+            ->assertJsonPath('data.memberships.2.id', (string) $pending->id)
+            ->assertJsonPath('data.memberships.3.id', (string) $frozen->id)
+            ->assertJsonPath('data.last_membership', null);
+    }
+
+    public function test_latest_expired_purchase_is_shown_when_no_current_memberships_exist(): void {
+        $client = $this->client();
+        $this->program($client, ['active_until' => today()->subDays(5)->toDateTimeString()]);
+        $latest = $this->program($client, ['active_until' => today()->subDay()->toDateTimeString()]);
+        $this->memberships($client)->assertOk()->assertJsonPath('data.memberships', [])
+            ->assertJsonPath('data.last_membership.id', (string) $latest->id)
+            ->assertJsonPath('data.last_membership.status', 'expired')
+            ->assertJsonPath('data.last_membership.active', false);
+    }
+
+    public function test_exhausted_membership_is_not_usable_even_with_a_negative_balance_or_freeze(): void {
+        $client = $this->client();
+        $program = $this->program($client, ['entries_count' => 0]);
+        SessionService::create(['service_sale_id' => $program->id]);
+        StopCard::create(['service_sale_id' => $program->id, 'is_active' => true]);
+        $this->memberships($client)->assertOk()->assertJsonPath('data.memberships', [])
+            ->assertJsonPath('data.last_membership.status', 'exhausted')
+            ->assertJsonPath('data.last_membership.active', false);
+    }
+
+    public function test_history_returns_all_owned_membership_states_with_purchase_dates(): void {
+        $client = $this->client();
+        $activatedAt = now()->subDay();
+        $active = $this->program($client, ['activated_at' => $activatedAt->toDateTimeString()]);
+        $expired = $this->program($client, ['active_until' => today()->subDay()->toDateTimeString()]);
+        $exhausted = $this->program($client, ['entries_count' => 0]);
+        $pending = $this->program($client, ['active_until' => null]);
+        $frozen = $this->program($client);
+        StopCard::create(['service_sale_id' => $frozen->id, 'is_active' => true]);
+        $this->program($client, [], Service::TYPE_SOLARIUM);
+        $other = $this->client();
+        $this->program($other);
+
+        $response = $this->history($client, '?client_id=' . $other->id)->assertOk()->assertJsonCount(5, 'data.items');
+        $response->assertJsonPath('data.items.0.id', (string) $frozen->id)
+            ->assertJsonPath('data.items.0.status', 'frozen')
+            ->assertJsonPath('data.items.1.id', (string) $pending->id)
+            ->assertJsonPath('data.items.1.status', 'pending_activation')
+            ->assertJsonPath('data.items.1.activated_at', null)
+            ->assertJsonPath('data.items.2.id', (string) $exhausted->id)
+            ->assertJsonPath('data.items.2.status', 'exhausted')
+            ->assertJsonPath('data.items.3.id', (string) $expired->id)
+            ->assertJsonPath('data.items.3.status', 'expired')
+            ->assertJsonPath('data.items.4.id', (string) $active->id)
+            ->assertJsonPath('data.items.4.status', 'active')
+            ->assertJsonPath('data.items.4.purchased_at', $active->sale->created_at->toIso8601String())
+            ->assertJsonPath('data.items.4.activated_at', $activatedAt->toIso8601String())
+            ->assertJsonPath('data.next_cursor', null);
+    }
+
+    public function test_deleting_a_catalog_service_does_not_hide_a_purchased_membership(): void {
+        $client = $this->client();
+        $program = $this->program($client);
+        $program->service->delete();
+        $this->memberships($client)->assertOk()->assertJsonPath('data.memberships.0.id', (string) $program->id);
+        $this->history($client)->assertOk()->assertJsonPath('data.items.0.id', (string) $program->id);
+    }
+
+    public function test_history_cursor_is_stable_when_another_purchase_is_added(): void {
+        $client = $this->client();
+        $first = $this->program($client);
+        $second = $this->program($client);
+        $this->program($client);
+        $this->history($client, '?limit=2&cursor=0')->assertOk()
+            ->assertJsonCount(2, 'data.items')->assertJsonPath('data.next_cursor', $second->sale->id);
+        $this->program($client);
+        $this->history($client, '?limit=2&cursor=' . $second->sale->id)->assertOk()
+            ->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', (string) $first->id)
+            ->assertJsonPath('data.next_cursor', null);
+    }
+
+    public function test_history_default_page_size_is_twenty(): void {
+        $client = $this->client();
+        for ($i = 0; $i < 21; $i++) {
+            $this->program($client);
+        }
+        $this->history($client)->assertOk()->assertJsonCount(20, 'data.items')
+            ->assertJsonPath('data.next_cursor', 2);
+    }
+
+    public function test_history_cursor_uses_purchase_id_when_membership_ids_differ(): void {
+        $client = $this->client();
+        $first = $this->program($client);
+        DB::table('sales')->where('salable_id', $first->id)->update(['id' => 100]);
+        $second = $this->program($client);
+        $this->program($client);
+        $cursor = $second->sale->id;
+        $this->assertNotEquals($second->id, $cursor);
+        $this->history($client, '?limit=2')->assertOk()->assertJsonPath('data.next_cursor', $cursor);
+        $this->history($client, '?limit=2&cursor=' . $cursor)->assertOk()
+            ->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', (string) $first->id)
+            ->assertJsonPath('data.next_cursor', null);
+    }
+
+    public function test_empty_history_and_maximum_page_size(): void {
+        $this->history($this->client(), '?limit=50')->assertOk()
+            ->assertExactJson(['data' => ['items' => [], 'next_cursor' => null]]);
+    }
+
+    /** @dataProvider invalidHistoryPagination */
+    public function test_history_rejects_invalid_pagination(string $query): void {
+        $this->history($this->client(), '?' . $query)->assertStatus(422)
+            ->assertJsonPath('error.code', 'VALIDATION_ERROR');
+    }
+
+    public function invalidHistoryPagination(): array {
+        return [['limit=0'], ['limit=51'], ['limit=abc'], ['cursor=-1'], ['cursor=1.5'], ['cursor=abc']];
+    }
+
+    public function test_history_requires_authorization(): void {
+        $this->getJson('/api/mobile/v1/me/membership/history')->assertStatus(401)
+            ->assertJsonPath('error.code', 'UNAUTHORIZED');
     }
 
     public function test_only_confirmed_penalties_reduce_remaining_visits(): void {
@@ -160,5 +298,10 @@ class MobileMembershipTest extends TestCase
     private function memberships(Client $client) {
         return $this->withToken($client->createToken('mobile')->plainTextToken)
             ->getJson('/api/mobile/v1/me/membership');
+    }
+
+    private function history(Client $client, string $query = '') {
+        return $this->withToken($client->createToken('mobile')->plainTextToken)
+            ->getJson('/api/mobile/v1/me/membership/history' . $query);
     }
 }

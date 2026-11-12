@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Mobile\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Mobile\Client\MembershipHistoryRequest;
 use App\Http\Requests\Mobile\Client\VisitsRequest;
 use App\Http\Resources\Mobile\Client\MembershipsResource;
+use App\Http\Resources\Mobile\Client\MembershipHistoryResource;
 use App\Http\Resources\Mobile\Client\PassResource;
 use App\Http\Resources\Mobile\Client\ProfileResource;
 use App\Http\Resources\Mobile\Client\TrinketResource;
@@ -26,6 +28,11 @@ class ClientController extends Controller
 
     public function membership(Request $request): MembershipsResource {
         return MembershipsResource::make($this->service->getMemberships($request->user('mobile')));
+    }
+
+    public function membershipHistory(MembershipHistoryRequest $request): MembershipHistoryResource {
+        $data = $request->validated();
+        return MembershipHistoryResource::make($this->service->getMembershipHistory($request->user('mobile'), (int) $data['limit'], (int) $data['cursor']));
     }
 
     public function trinket(Request $request): TrinketResource {

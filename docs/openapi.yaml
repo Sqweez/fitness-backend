@@ -224,20 +224,21 @@ paths:
 
   /me/membership:
     get:
-      summary: Текущие абонементы клиента
+      summary: Абонементы для главного экрана
       description: |
-        Возвращает все текущие программы и безлимиты владельца токена от новых покупок к старым.
-        Истёкшие и полностью использованные абонементы, а также солярий не включаются.
+        Возвращает текущие программы и безлимиты владельца токена: active, pending_activation, frozen.
+        Внутри статуса порядок по убыванию ID покупки. Солярий не включается.
+        Если текущих нет, last_membership содержит последнюю купленную завершённую карту; иначе null.
         Замороженные абонементы остаются в списке, даже если исходная дата окончания прошла.
         Замороженные и ещё не активированные абонементы имеют active=false.
         Остаток учитывает посещения и подтверждённые штрафные списания.
-        message отображается приложением, только если нет ни одного активного абонемента.
+        message отображается, только если memberships пуст и last_membership=null.
       operationId: getMyMemberships
       security:
         - BearerAuth: []
       responses:
         '200':
-          description: Список текущих абонементов; отсутствие абонементов — успешный ответ с пустым массивом
+          description: Текущие абонементы и последняя завершённая покупка при отсутствии текущих
           content:
             application/json:
               schema:
@@ -257,6 +258,63 @@ paths:
           headers:
             Retry-After:
               description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+  /me/membership/history:
+    get:
+      summary: История всех абонементов
+      description: |
+        Возвращает все покупки программ и безлимитов, включая текущие и завершённые.
+        Купленный тариф остаётся виден после удаления из каталога. Солярий не включается.
+        Порядок по убыванию ID покупки (Sale). cursor=0 — первая страница.
+        Передавайте next_cursor без изменений: это ID покупки, а не ID абонемента (ServiceSale).
+        Новые покупки не сдвигают следующие страницы.
+      operationId: getMyMembershipHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Страница покупок; на последней странице next_cursor=null
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipHistoryResponse'
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Некорректный размер страницы или курсор; код VALIDATION_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
               schema:
                 type: integer
           content:
@@ -602,12 +660,20 @@ components:
       type: object
       required:
         - memberships
+        - last_membership
         - message
       properties:
         memberships:
           type: array
           items:
             $ref: '#/components/schemas/Membership'
+        last_membership:
+          description: Последняя купленная завершённая карта, только если текущих нет; иначе null
+          oneOf:
+            - $ref: '#/components/schemas/Membership'
+            - type: object
+              nullable: true
+              enum: [null]
         message:
           type: string
           example: Поможем выбрать подходящий тариф. Напишите администратору или оформите абонемент на ресепшене клуба.
@@ -617,10 +683,13 @@ components:
       required:
         - id
         - title
+        - status
         - active
         - limited
         - visits_left
         - visits_total
+        - purchased_at
+        - activated_at
         - valid_until
       properties:
         id:
@@ -630,9 +699,14 @@ components:
         title:
           type: string
           example: Тренажёрный зал
+        status:
+          type: string
+          enum: [active, pending_activation, frozen, expired, exhausted]
+          description: Нулевой или отрицательный остаток означает exhausted; иначе заморозка имеет приоритет перед истечением исходной даты
+          example: active
         active:
           type: boolean
-          description: Возможность использовать абонемент по текущим правилам клуба
+          description: true только при status=active
           example: true
         limited:
           type: boolean
@@ -647,12 +721,45 @@ components:
           nullable: true
           description: Начальное количество посещений; null для безлимита
           example: 16
+        purchased_at:
+          type: string
+          format: date-time
+          description: Дата покупки
+          example: '2026-10-23T10:00:00+05:00'
+        activated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Записанная дата активации; null, если отсутствует
+          example: '2026-10-23T17:00:00+05:00'
         valid_until:
           type: string
           format: date-time
           nullable: true
           description: Конец последнего дня действия; null до активации
           example: '2026-11-23T23:59:59+05:00'
+
+    MembershipHistoryResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - items
+            - next_cursor
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Membership'
+            next_cursor:
+              type: integer
+              format: int64
+              nullable: true
+              minimum: 1
+              example: 456
 
     ClientProfileResponse:
       type: object

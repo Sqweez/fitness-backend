@@ -4,11 +4,13 @@ namespace App\Http\Services;
 
 use App\Models\Client;
 use App\Models\Pass;
-use App\Models\Sale;
+use App\Models\Service;
+use App\Models\ServiceSale;
 use App\Models\Trinket;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Support\Collection;
 
 class MobileClientService
 {
@@ -21,18 +23,34 @@ class MobileClientService
         ];
     }
 
-    public function getMemberships(Client $client): Collection {
-        return $client->programs()
-            ->with(['salable.service', 'salable.visits', 'salable.penalties', 'salable.active_stop'])
-            ->orderByDesc('id')
-            ->get()
-            ->filter(function (Sale $sale) {
-                $program = $sale->salable;
-                return (!$program->is_expired || $program->is_stopped)
-                    && ($program->is_unlimited || $program->remaining_visits > 0);
+    public function getMemberships(Client $client): array {
+        $programs = $this->membershipSales($client)->get()->pluck('salable');
+        $priorities = ['active' => 0, 'pending_activation' => 1, 'frozen' => 2];
+        $current = $programs->filter(function (ServiceSale $program) use ($priorities) {
+            return isset($priorities[$program->membership_status]);
+        })->sort(function (ServiceSale $first, ServiceSale $second) use ($priorities) {
+            return ($priorities[$first->membership_status] <=> $priorities[$second->membership_status])
+                ?: ($second->sale->id <=> $first->sale->id);
+        })->values();
+
+        return [
+            'memberships' => $current,
+            'last_membership' => $current->isEmpty() ? $programs->first() : null,
+        ];
+    }
+
+    public function getMembershipHistory(Client $client, int $limit, int $cursor): array {
+        $sales = $this->membershipSales($client)
+            ->when($cursor > 0, function (Builder $query) use ($cursor) {
+                $query->where('sales.id', '<', $cursor);
             })
-            ->pluck('salable')
-            ->values();
+            ->limit($limit + 1)->get();
+        $items = $sales->take($limit)->values();
+
+        return [
+            'items' => $items->pluck('salable'),
+            'next_cursor' => $sales->count() > $limit ? (int) $items->last()->id : null,
+        ];
     }
 
     public function getTrinket(Client $client): ?Trinket {
@@ -65,5 +83,21 @@ class MobileClientService
             'items' => $items,
             'next_cursor' => $visits->count() > $limit ? (int) $items->last()->id : null,
         ];
+    }
+
+    private function membershipSales(Client $client): HasMany {
+        return $client->sales()
+            ->whereHasMorph('salable', [ServiceSale::class], function (Builder $query) {
+                $query->whereHas('service', function (Builder $query) {
+                    $query->withTrashed()->whereIn('service_type_id', [Service::TYPE_PROGRAM, Service::TYPE_UNLIMITED]);
+                });
+            })
+            ->with([
+                'salable.service' => function (BelongsTo $query) {
+                    $query->withTrashed();
+                },
+                'salable.visits', 'salable.penalties', 'salable.active_stop', 'salable.sale',
+            ])
+            ->reorder()->orderByDesc('sales.id');
     }
 }

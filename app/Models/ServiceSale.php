@@ -67,6 +67,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property-read \App\Models\SessionService|null $active_session
  * @property-read \App\Models\StopCard|null $active_stop
  * @property-read bool $is_stopped
+ * @property-read string $membership_status
  * @property-read Collection|\App\Models\StopCard[] $stops
  * @property-read int|null $stops_count
  */
@@ -213,5 +214,22 @@ class ServiceSale extends Model
 
     public function getIsStoppedAttribute(): bool {
         return !!$this->active_stop;
+    }
+
+    public function getMembershipStatusAttribute(): string {
+        if (!$this->is_unlimited && $this->remaining_visits <= 0) {
+            return 'exhausted';
+        }
+        if ($this->is_stopped) {
+            return 'frozen';
+        }
+        if (!$this->is_activated) {
+            return 'pending_activation';
+        }
+        if ($this->is_expired) {
+            return 'expired';
+        }
+
+        return 'active';
     }
 }
