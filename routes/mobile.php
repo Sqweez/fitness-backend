@@ -3,6 +3,7 @@
 use App\Http\Controllers\Mobile\V1\AuthController;
 use App\Http\Controllers\Mobile\V1\ClientController;
 use App\Http\Controllers\Mobile\V1\DocsController;
+use App\Http\Controllers\Mobile\V1\TrainerController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'mobile/v1'], function () {
@@ -18,6 +19,7 @@ Route::group(['prefix' => 'mobile/v1'], function () {
 
     Route::group(['middleware' => 'auth:mobile'], function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
+        Route::get('trainers', [TrainerController::class, 'index']);
 
         Route::group(['prefix' => 'me'], function () {
             Route::get('/', [ClientController::class, 'me']);

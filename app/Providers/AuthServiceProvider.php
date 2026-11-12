@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -25,6 +27,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        Gate::define('manage-trainers', function (User $user) {
+            return $user->roles->contains('id', Role::ROLE_BOSS)
+                || $user->roles->contains('id', Role::ROLE_ADMIN);
+        });
     }
 }

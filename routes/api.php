@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\{ClientBookmarkController,
     ServiceController,
     SessionController,
     StatsController,
+    TrainerController,
     UserController,
     UserReportController,
     WithDrawalController};
@@ -25,6 +26,10 @@ Route::group([
     'prefix' => 'v1',
     'middleware' => 'auth:api'
 ], function () {
+    Route::group(['middleware' => 'can:manage-trainers'], function () {
+        Route::apiResource('trainers', TrainerController::class);
+    });
+
     Route::apiResource('clubs', ClubController::class)->only(['index']);
     Route::apiResource('roles', RoleController::class)->only(['index']);
     Route::post('users/upload/{user}', [UserController::class, 'uploadPhoto']);
