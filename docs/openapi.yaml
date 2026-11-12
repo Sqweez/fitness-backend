@@ -311,6 +311,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /me/pass:
+    get:
+      summary: Штрихкод карты клиента
+      description: |
+        Возвращает исходный код карты, привязанной к владельцу мобильного токена, в формате CODE128.
+        Код передаётся строкой с сохранением ведущих нулей и не требует периодического обновления.
+        Наличие активного абонемента не проверяется. Если карта не выдана, возвращается PASS_UNAVAILABLE.
+      operationId: getMyPass
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Код и формат штрихкода выданной карты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassResponse'
+        '401':
+          description: Токен не передан, недействителен или клиент удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Необходима авторизация
+        '403':
+          description: Клиенту не выдана карта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                error:
+                  code: PASS_UNAVAILABLE
+                  message: Карта клиента не выдана
+        '429':
+          description: Превышен общий API-лимит запросов
+          headers:
+            Retry-After:
+              description: Количество секунд ожидания
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -319,6 +368,28 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    PassResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Pass'
+
+    Pass:
+      type: object
+      required:
+        - code
+        - format
+      properties:
+        code:
+          type: string
+          example: '0006287938'
+        format:
+          type: string
+          enum: [CODE128]
+          example: CODE128
+
     TrinketResponse:
       type: object
       required:
@@ -433,6 +504,7 @@ components:
         - VALIDATION_ERROR
         - RATE_LIMITED
         - UNAUTHORIZED
+        - PASS_UNAVAILABLE
 
     SendCodeRequest:
       type: object

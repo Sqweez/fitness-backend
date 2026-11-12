@@ -3,9 +3,11 @@
 namespace App\Http\Services;
 
 use App\Models\Client;
+use App\Models\Pass;
 use App\Models\Sale;
 use App\Models\Trinket;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Collection;
 
 class MobileClientService
@@ -37,5 +39,16 @@ class MobileClientService
         return Trinket::query()->whereHas('sessions', function (Builder $query) use ($client) {
             $query->where('client_id', $client->id)->whereNull('finished_at');
         })->first();
+    }
+
+    public function getPass(Client $client): Pass {
+        $pass = $client->pass;
+        if ($pass === null) {
+            throw new HttpResponseException(response()->json([
+                'error' => ['code' => 'PASS_UNAVAILABLE', 'message' => 'Карта клиента не выдана'],
+            ], 403));
+        }
+
+        return $pass;
     }
 }

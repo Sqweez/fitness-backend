@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mobile\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Mobile\Client\MembershipsResource;
+use App\Http\Resources\Mobile\Client\PassResource;
 use App\Http\Resources\Mobile\Client\ProfileResource;
 use App\Http\Resources\Mobile\Client\TrinketResource;
 use App\Http\Services\MobileClientService;
@@ -27,5 +28,9 @@ class ClientController extends Controller
 
     public function trinket(Request $request): TrinketResource {
         return TrinketResource::make($this->service->getTrinket($request->user('mobile')));
+    }
+
+    public function pass(Request $request): PassResource {
+        return PassResource::make($this->service->getPass($request->user('mobile')));
     }
 }
