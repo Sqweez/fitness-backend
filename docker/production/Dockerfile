@@ -1,4 +1,4 @@
-FROM php:8.0.30-fpm-alpine3.16 AS php-base
+FROM php:8.3.36-fpm-alpine3.23 AS php-base
 
 RUN apk add --no-cache curl libpng libjpeg-turbo freetype libzip oniguruma icu-libs \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS libpng-dev libjpeg-turbo-dev freetype-dev libzip-dev oniguruma-dev icu-dev \

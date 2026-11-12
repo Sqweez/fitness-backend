@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Image\Manipulations;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -28,7 +28,7 @@ class Trainer extends Model implements HasMedia
     public function registerMediaConversions(Media $media = null): void {
         $this->addMediaConversion('mobile')
             ->performOnCollections(self::MEDIA_PHOTO)
-            ->fit(Manipulations::FIT_CROP, 600, 600)
+            ->fit(Fit::Crop, 600, 600)
             ->nonQueued();
     }
 

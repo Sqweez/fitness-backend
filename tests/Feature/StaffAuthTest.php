@@ -59,8 +59,8 @@ class StaffAuthTest extends TestCase
         });
         require_once database_path('migrations/2022_08_06_193816_create_media_table.php');
         (new \CreateMediaTable())->up();
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     public function test_password_login_issues_a_sanctum_token_and_preserves_user_roles(): void {
@@ -155,7 +155,7 @@ class StaffAuthTest extends TestCase
         $this->postJson('/api/auth/login', $data)->assertStatus(422);
     }
 
-    public function invalidLogins(): array {
+    public static function invalidLogins(): array {
         return [[[]], [['login' => '+77771234567']], [['password' => 'password']], [['pass' => []]], [['login' => [], 'password' => 'password']]];
     }
 

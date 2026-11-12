@@ -26,8 +26,8 @@ class MobileAuthTest extends TestCase
             $table->softDeletes();
             $table->timestamps();
         });
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
         Route::get('api/mobile/v1/testing/me', function () {
             return ['id' => (string) auth('mobile')->id()];
         })->middleware('auth:mobile');

@@ -29,8 +29,8 @@ class MobilePassTest extends TestCase
             $table->nullableMorphs('passable');
             $table->timestamps();
         });
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     /** @dataProvider codes */
@@ -40,7 +40,7 @@ class MobilePassTest extends TestCase
         $this->pass($client)->assertOk()->assertExactJson(['data' => ['code' => $code, 'format' => 'CODE128']]);
     }
 
-    public function codes(): array {
+    public static function codes(): array {
         return [['0006287938'], ['6287938'], ['CLUB-123']];
     }
 

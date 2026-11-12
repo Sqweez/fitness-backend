@@ -66,8 +66,8 @@ class MobileMembershipTest extends TestCase
             $table->dateTime('unstopped_at')->nullable();
             $table->timestamps();
         });
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     public function test_no_memberships_returns_an_empty_list_and_message(): void {
@@ -250,7 +250,7 @@ class MobileMembershipTest extends TestCase
             ->assertJsonPath('error.code', 'VALIDATION_ERROR');
     }
 
-    public function invalidHistoryPagination(): array {
+    public static function invalidHistoryPagination(): array {
         return [['limit=0'], ['limit=51'], ['limit=abc'], ['cursor=-1'], ['cursor=1.5'], ['cursor=abc']];
     }
 
@@ -292,7 +292,7 @@ class MobileMembershipTest extends TestCase
         $this->memberships($client)->assertOk()->assertJsonPath($path, $expected);
     }
 
-    public function renewalCases(): array {
+    public static function renewalCases(): array {
         return [
             'two visits' => [2, 10, false, false, true],
             'one visit' => [1, 10, false, false, true],

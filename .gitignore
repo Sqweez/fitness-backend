@@ -19,3 +19,4 @@ yarn-error.log
 backup.sql
 .env.docker.local
 .env.production
+/.phpunit.cache

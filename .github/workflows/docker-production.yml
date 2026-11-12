@@ -74,5 +74,6 @@ jobs:
             echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
             docker compose -f compose.production.yml --env-file .env.production pull
             docker compose -f compose.production.yml --env-file .env.production up -d --remove-orphans
+            docker compose -f compose.production.yml --env-file .env.production exec -T php php artisan migrate --force
             docker logout ghcr.io
           "

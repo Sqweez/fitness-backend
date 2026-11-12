@@ -255,7 +255,7 @@ class Client extends Authenticatable implements HasMedia
         if (!$this->birth_date) {
             return 'Неизвестно';
         }
-        return now()->diffInYears($this->birth_date);
+        return (int) now()->diffInYears($this->birth_date, true);
     }
 
     public function getAgeTypeAttribute(): string {
@@ -295,7 +295,7 @@ class Client extends Authenticatable implements HasMedia
             ->where('salable.service.service_type_id', 1)
             ->filter(function ($sale) {
                 return $sale['salable']['can_be_used'] === true &&
-                    Carbon::parse($sale['salable']['active_until'])->diffInDays(now()) >= Club::UNLIMITED_DAYS_BEFORE_DISCOUNT;
+                    (int) Carbon::parse($sale['salable']['active_until'])->diffInDays(now(), true) >=Club::UNLIMITED_DAYS_BEFORE_DISCOUNT;
             })
             ->count() > 0;
     }

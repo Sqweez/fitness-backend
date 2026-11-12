@@ -35,8 +35,8 @@ class MobileTrinketTest extends TestCase
             $table->dateTime('finished_at')->nullable();
             $table->timestamps();
         });
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     public function test_active_session_returns_cabinet_number_instead_of_key_code(): void {

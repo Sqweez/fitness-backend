@@ -20,8 +20,8 @@ class MobileProfileTest extends TestCase
             $table->softDeletes();
             $table->timestamps();
         });
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     /** @dataProvider names */
@@ -31,7 +31,7 @@ class MobileProfileTest extends TestCase
         $this->withToken($token)->getJson('/api/mobile/v1/me')->assertOk()->assertExactJson(['data' => $expected]);
     }
 
-    public function names(): array {
+    public static function names(): array {
         return [
             ['Иванов Алексей Иванович', ['first_name' => 'Алексей', 'last_name' => 'Иванов']],
             ["  Қайратов   Әли\tНұрланұлы  ", ['first_name' => 'Әли', 'last_name' => 'Қайратов']],

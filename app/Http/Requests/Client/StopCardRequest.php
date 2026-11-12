@@ -39,7 +39,7 @@ class StopCardRequest extends FormRequest
         $this->merge([
             'user_id' => auth()->id(),
             'active_until_prev' => Carbon::parse($this->active_until_prev),
-            'remaining_days' => now()->diffInDays(Carbon::parse($this->active_until_prev)) + 1,
+            'remaining_days' => (int) now()->diffInDays(Carbon::parse($this->active_until_prev), true) + 1,
         ]);
     }
 }

@@ -28,8 +28,8 @@ class MobileVisitsTest extends TestCase
             $table->dateTime('finished_at')->nullable();
             $table->timestamps();
         });
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     public function test_no_visits_returns_an_empty_page(): void {
@@ -108,7 +108,7 @@ class MobileVisitsTest extends TestCase
             ->assertStatus(422)->assertJsonPath('error.code', 'VALIDATION_ERROR');
     }
 
-    public function invalidPagination(): array {
+    public static function invalidPagination(): array {
         return [['limit=0'], ['limit=51'], ['limit=abc'], ['cursor=-1'], ['cursor=1.5'], ['cursor=abc']];
     }
 

@@ -45,8 +45,8 @@ class TrainerTest extends TestCase
         (new \CreateTrainersTable())->up();
         require_once database_path('migrations/2022_08_06_193816_create_media_table.php');
         (new \CreateMediaTable())->up();
-        require_once base_path('vendor/laravel/sanctum/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php');
-        (new \CreatePersonalAccessTokensTable())->up();
+        (require database_path('migrations/2019_12_14_000001_create_personal_access_tokens_table.php'))->up();
+        (require database_path('migrations/2026_11_13_000000_add_expires_at_to_personal_access_tokens_table.php'))->up();
     }
 
     public function test_mobile_list_requires_a_client_token(): void {
@@ -92,7 +92,7 @@ class TrainerTest extends TestCase
         $this->assertIsString($response->json('data.id'));
     }
 
-    public function managers(): array {
+    public static function managers(): array {
         return [[Role::ROLE_ADMIN], [Role::ROLE_BOSS]];
     }
 
