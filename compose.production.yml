@@ -28,8 +28,11 @@ x-php: &php
     DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
     CACHE_DRIVER: file
     SESSION_DRIVER: file
-    QUEUE_CONNECTION: sync
-    BROADCAST_DRIVER: log
+    QUEUE_CONNECTION: database
+    BROADCAST_DRIVER: reverb
+    REVERB_HOST: reverb
+    REVERB_PORT: '8080'
+    REVERB_SCHEME: http
     TELESCOPE_ENABLED: 'false'
     LOG_CHANNEL: stderr
   volumes:
@@ -72,6 +75,8 @@ services:
     depends_on:
       php:
         condition: service_started
+      reverb:
+        condition: service_started
     mem_limit: 64m
     cpus: 0.5
     logging: *logging
@@ -107,6 +112,19 @@ services:
     <<: *php
     profiles: [scheduler]
     command: [php, artisan, schedule:work, --no-interaction]
+    mem_limit: 256m
+    cpus: 0.5
+
+  queue:
+    <<: *php
+    command: [php, artisan, queue:work, --tries=3, --max-time=3600, --no-interaction]
+    stop_grace_period: 60s
+    mem_limit: 256m
+    cpus: 0.5
+
+  reverb:
+    <<: *php
+    command: [php, artisan, reverb:start, --host=0.0.0.0, --port=8080, --no-interaction]
     mem_limit: 256m
     cpus: 0.5
 
