@@ -25,7 +25,7 @@ class Trainer extends Model implements HasMedia
         $this->addMediaCollection(self::MEDIA_PHOTO)->singleFile();
     }
 
-    public function registerMediaConversions(Media $media = null): void {
+    public function registerMediaConversions(?Media $media = null): void {
         $this->addMediaConversion('mobile')
             ->performOnCollections(self::MEDIA_PHOTO)
             ->fit(Fit::Crop, 600, 600)
