@@ -31,6 +31,9 @@ Route::group([
     });
 
     Route::apiResource('clubs', ClubController::class)->only(['index']);
+    Route::group(['middleware' => 'can:manage-club,club'], function () {
+        Route::apiResource('clubs', ClubController::class)->only(['show', 'update']);
+    });
     Route::apiResource('roles', RoleController::class)->only(['index']);
     Route::post('users/upload/{user}', [UserController::class, 'uploadPhoto']);
     Route::post('users/{user}/club', [UserController::class, 'chooseWorkingClub']);

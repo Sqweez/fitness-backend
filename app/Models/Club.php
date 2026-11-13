@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * App\Models\Club
@@ -32,6 +33,10 @@ class Club extends Model
     const UNLIMITED_DAYS_BEFORE_DISCOUNT = 7;
 
     protected $guarded = [];
+
+    public function profile(): HasOne {
+        return $this->hasOne(ClubProfile::class);
+    }
 
     public function clients(): HasMany {
         return $this->hasMany(Client::class);

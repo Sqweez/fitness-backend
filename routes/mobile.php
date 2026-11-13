@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Mobile\V1\AuthController;
 use App\Http\Controllers\Mobile\V1\ClientController;
+use App\Http\Controllers\Mobile\V1\ClubController;
 use App\Http\Controllers\Mobile\V1\DocsController;
 use App\Http\Controllers\Mobile\V1\TrainerController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,7 @@ Route::group(['prefix' => 'mobile/v1'], function () {
     });
 
     Route::group(['middleware' => 'auth:mobile'], function () {
+        Route::get('club', [ClubController::class, 'show']);
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('trainers', [TrainerController::class, 'index']);
 

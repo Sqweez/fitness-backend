@@ -526,6 +526,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /club:
+    get:
+      summary: Информация о клубе клиента
+      description: |
+        Клуб определяется по club_id авторизованного клиента. Параметр выбора клуба не предусмотрен.
+        Профиль хранится отдельно от учётных данных клуба. До заполнения профиля
+        адрес, контакты, карта и обложка равны null, расписание — [].
+      operationId: getClientClub
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Клуб авторизованного клиента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubResponse'
+        '401':
+          description: Необходим мобильный токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Привязанный к клиенту клуб не найден
+        '429':
+          description: Превышен общий API-лимит запросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -534,6 +566,59 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    ClubResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Club'
+
+    Club:
+      type: object
+      required: [id, name, cover_url, address, map_url, schedule, phone, whatsapp, instagram]
+      properties:
+        id:
+          type: string
+          example: '2'
+        name:
+          type: string
+          example: Гладиаторы
+        cover_url:
+          type: string
+          format: uri
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        map_url:
+          type: string
+          format: uri
+          nullable: true
+        schedule:
+          type: array
+          items:
+            type: object
+            required: [days, hours]
+            properties:
+              days:
+                type: string
+                example: Пн–Пт
+              hours:
+                type: string
+                example: 08:00–22:00
+        phone:
+          type: string
+          nullable: true
+          example: '+77758761111'
+        whatsapp:
+          type: string
+          nullable: true
+          example: '77758761111'
+        instagram:
+          type: string
+          nullable: true
+          example: gladiators8
+
     TrainersResponse:
       type: object
       required:
