@@ -1,6 +1,6 @@
 # Fitness Club Management System
 
-Backend API для системы управления фитнес-клубом. Laravel 8 + MySQL + Redis.
+Backend API для системы управления фитнес-клубом. Laravel 13 + PHP 8.4 + MariaDB 10.11 + Reverb.
 
 ## Требования
 
@@ -8,10 +8,9 @@ Backend API для системы управления фитнес-клубом
 - Make (опционально)
 
 **Или без Docker:**
-- PHP 7.4+
-- Composer
-- MySQL 8.0
-- Redis
+- PHP 8.4 (расширения: pdo_mysql, mbstring, exif, pcntl, bcmath, gd, zip, intl)
+- Composer 2
+- MariaDB 10.11
 
 ## Установка (Docker)
 
@@ -20,14 +19,25 @@ Backend API для системы управления фитнес-клубом
 git clone <repository-url>
 cd fitness-backend
 
-# Скопировать конфигурацию
-cp .env.docker .env
-
-# Запустить установку
+# Установка: создаст .env из .env.docker, соберёт образы, поднимет контейнеры,
+# поставит зависимости, сгенерирует APP_KEY и прогонит миграции
 make setup
 ```
 
-Приложение будет доступно на `http://localhost:8080`
+После установки работает:
+
+| Что | Где |
+|-----|-----|
+| API | `http://localhost:8080` |
+| Reverb (WebSocket) | `ws://localhost:8080/app/{REVERB_APP_KEY}` — nginx проксирует `/app/` в контейнер `reverb` |
+| MariaDB | `127.0.0.1:3306`, пользователь и пароль из `.env` |
+| Очередь | контейнер `queue`, драйвер `database` |
+
+Планировщик по умолчанию не запускается: `make scheduler`.
+
+Если `.env` уже был, `make setup` его не перезапишет. Должно быть `DB_HOST=db`, `QUEUE_CONNECTION=database`, `BROADCAST_DRIVER=reverb` и заполнены `REVERB_*` (см. `.env.docker`).
+
+После изменения кода, который выполняется в очереди или в Reverb, перезапусти их: `make queue-restart`.
 
 ## Установка (без Docker)
 
@@ -44,8 +54,10 @@ php artisan key:generate
 # Запустить миграции
 php artisan migrate --seed
 
-# Запустить сервер
+# Запустить сервер, очередь и Reverb (в отдельных терминалах)
 php artisan serve
+php artisan queue:work
+php artisan reverb:start
 ```
 
 ## Команды Docker (Makefile)
@@ -57,7 +69,7 @@ make restart         # Перезапустить
 make logs s=php      # Логи контейнера
 
 make shell           # Shell в PHP контейнер
-make shell-mysql     # Shell в MySQL
+make shell-db        # Консоль MariaDB
 
 make artisan c="..."  # Artisan команда
 make composer c="..." # Composer команда
@@ -66,6 +78,9 @@ make migrate         # Миграции
 make migrate-fresh   # Fresh + seed
 make seed            # Сидеры
 make rollback        # Откат миграции
+
+make queue-restart   # Перезапустить очередь и Reverb
+make scheduler       # Запустить планировщик
 
 make cache-clear     # Очистить кэш
 make test            # Тесты
@@ -120,13 +135,14 @@ app/
 └── helpers.php       # Глобальные хелперы
 
 docker/
-├── nginx/            # Конфиг Nginx
-└── php/              # Dockerfile PHP
+├── php/              # Dockerfile PHP для локальной разработки
+└── production/       # Образы и nginx.conf для прода (nginx.conf используется и локально)
 ```
 
 ## Технологии
 
-- **Framework:** Laravel 8
+- **Framework:** Laravel 13, PHP 8.4
+- **WebSocket:** Laravel Reverb
 - **Auth:** Laravel Sanctum, раздельные guards для сотрудников и клиентов
 - **Media:** Spatie Media Library
 - **DTO:** Spatie Data Transfer Object

@@ -3,11 +3,14 @@
 use App\Http\Controllers\Mobile\V1\AuthController;
 use App\Http\Controllers\Mobile\V1\ClientController;
 use App\Http\Controllers\Mobile\V1\ClubController;
+use App\Http\Controllers\Mobile\V1\ConfigController;
 use App\Http\Controllers\Mobile\V1\DocsController;
 use App\Http\Controllers\Mobile\V1\TrainerController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'mobile/v1'], function () {
+    Route::get('config', [ConfigController::class, 'show']);
+
     Route::group(['prefix' => 'docs'], function () {
         Route::get('openapi.yaml', [DocsController::class, 'schema']);
         Route::get('/', [DocsController::class, 'index']);

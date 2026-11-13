@@ -526,6 +526,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /config:
+    get:
+      summary: Настройки приложения до авторизации
+      description: |
+        Публичная ручка, вызывается при запуске приложения. Последний успешный ответ
+        приложение сохраняет на устройстве и использует при сетевых ошибках.
+        Ответ содержит общие контакты, минимальную версию, мобильный режим техработ,
+        ссылки магазинов и политики и публичные параметры Reverb, без секрета.
+        Незаданные ссылки магазинов и политики равны "#".
+      operationId: getMobileConfig
+      security: []
+      responses:
+        '200':
+          description: Актуальные настройки приложения
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store, private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+        '429':
+          description: Превышен общий API-лимит запросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
   /club:
     get:
       summary: Информация о клубе клиента
@@ -566,6 +596,88 @@ components:
       bearerFormat: Sanctum
 
   schemas:
+    ConfigResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/MobileConfig'
+
+    MobileConfig:
+      type: object
+      required: [contacts, app, maintenance, links, realtime]
+      properties:
+        contacts:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [title, url]
+            properties:
+              title:
+                type: string
+                example: Позвонить
+              url:
+                type: string
+                description: Готовая ссылка для открытия приложением без преобразования
+                example: tel:+77758761111
+        app:
+          type: object
+          required: [min_version, store_url]
+          properties:
+            min_version:
+              type: string
+              pattern: '^\d+\.\d+\.\d+$'
+              example: 1.0.0
+            store_url:
+              type: object
+              required: [ios, android]
+              properties:
+                ios:
+                  type: string
+                  description: Ссылка на App Store или "#" до заполнения
+                  example: '#'
+                android:
+                  type: string
+                  description: Ссылка на Google Play или "#" до заполнения
+                  example: '#'
+        maintenance:
+          type: object
+          required: [enabled, message]
+          properties:
+            enabled:
+              type: boolean
+              example: false
+            message:
+              type: string
+              nullable: true
+              description: null при выключенных техработах
+        links:
+          type: object
+          required: [privacy_policy]
+          properties:
+            privacy_policy:
+              type: string
+              description: Ссылка на политику конфиденциальности или "#" до заполнения
+              example: '#'
+        realtime:
+          type: object
+          required: [key, host, port, scheme]
+          properties:
+            key:
+              type: string
+              description: Публичный ключ Reverb, не секрет
+            host:
+              type: string
+              example: api.gladiatory.ariesdev.kz
+            port:
+              type: integer
+              example: 443
+            scheme:
+              type: string
+              enum: [http, https]
+              example: https
+
     ClubResponse:
       type: object
       required: [data]

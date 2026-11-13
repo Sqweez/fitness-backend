@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\{ClientBookmarkController,
     ClubController,
     DashboardController,
     EconomyController,
+    MobileConfigController,
     PenaltyController,
     ProductCategoryController,
     ProductController,
@@ -26,6 +27,11 @@ Route::group([
     'prefix' => 'v1',
     'middleware' => 'auth:api'
 ], function () {
+    Route::group(['prefix' => 'mobile/config', 'middleware' => 'can:manage-mobile-config'], function () {
+        Route::get('/', [MobileConfigController::class, 'show']);
+        Route::patch('/', [MobileConfigController::class, 'update']);
+    });
+
     Route::group(['middleware' => 'can:manage-trainers'], function () {
         Route::apiResource('trainers', TrainerController::class);
     });

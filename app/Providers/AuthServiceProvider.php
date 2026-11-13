@@ -39,6 +39,11 @@ class AuthServiceProvider extends ServiceProvider
                 || $user->roles->contains('id', Role::ROLE_ADMIN);
         });
 
+        Gate::define('manage-mobile-config', function (User $user) {
+            return $user->roles->contains('id', Role::ROLE_BOSS)
+                || $user->roles->contains('id', Role::ROLE_ADMIN);
+        });
+
         Gate::define('manage-club', function (User $user, Club $club) {
             return ($user->roles->contains('id', Role::ROLE_BOSS)
                 || $user->roles->contains('id', Role::ROLE_ADMIN))

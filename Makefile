@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs shell artisan composer migrate seed fresh test cache-clear queue tinker install
+.PHONY: help build up down restart logs ps shell shell-db artisan composer migrate migrate-fresh seed rollback tinker route-list install update dump cache-clear cache optimize queue-restart scheduler scheduler-stop test test-filter setup copy-env key-generate ide-helper db-dump db-restore permissions
 
 # Colors
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -30,67 +30,67 @@ ps: ## Show running containers
 shell: ## Access PHP container shell
 	docker compose exec php sh
 
-shell-mysql: ## Access MySQL container shell
-	docker compose exec mysql mysql -u root -p
+shell-db: ## Access MariaDB shell
+	docker compose exec db mariadb -u root -p$${DB_ROOT_PASSWORD:-root} $${DB_DATABASE:-fitness}
 
 ## —— Artisan Commands ——
 artisan: ## Run artisan command (use: make artisan c="migrate")
-	docker compose run --rm artisan $(c)
+	docker compose exec php php artisan $(c)
 
 migrate: ## Run migrations
-	docker compose run --rm artisan migrate
+	docker compose exec php php artisan migrate
 
 migrate-fresh: ## Fresh migration with seed
-	docker compose run --rm artisan migrate:fresh --seed
+	docker compose exec php php artisan migrate:fresh --seed
 
 seed: ## Run seeders
-	docker compose run --rm artisan db:seed
+	docker compose exec php php artisan db:seed
 
 rollback: ## Rollback last migration
-	docker compose run --rm artisan migrate:rollback
+	docker compose exec php php artisan migrate:rollback
 
 tinker: ## Run Laravel Tinker
 	docker compose exec php php artisan tinker
 
 route-list: ## Show all routes
-	docker compose run --rm artisan route:list
+	docker compose exec php php artisan route:list
 
 ## —— Composer Commands ——
 composer: ## Run composer command (use: make composer c="require package")
-	docker compose run --rm composer $(c)
+	docker compose exec php composer $(c)
 
 install: ## Install composer dependencies
-	docker compose run --rm composer install
+	docker compose exec php composer install
 
 update: ## Update composer dependencies
-	docker compose run --rm composer update
+	docker compose exec php composer update
 
 dump: ## Composer dump-autoload
-	docker compose run --rm composer dump-autoload
+	docker compose exec php composer dump-autoload
 
 ## —— Cache ——
 cache-clear: ## Clear all cache
-	docker compose run --rm artisan cache:clear
-	docker compose run --rm artisan config:clear
-	docker compose run --rm artisan route:clear
-	docker compose run --rm artisan view:clear
+	docker compose exec php php artisan cache:clear
+	docker compose exec php php artisan config:clear
+	docker compose exec php php artisan route:clear
+	docker compose exec php php artisan view:clear
 
 cache: ## Cache config and routes
-	docker compose run --rm artisan config:cache
-	docker compose run --rm artisan route:cache
+	docker compose exec php php artisan config:cache
+	docker compose exec php php artisan route:cache
 
 optimize: ## Optimize application
-	docker compose run --rm artisan optimize
+	docker compose exec php php artisan optimize
 
 ## —— Queue ——
-queue: ## Start queue worker
-	docker compose --profile worker up -d queue
+queue-restart: ## Restart queue worker and Reverb (pick up code changes)
+	docker compose restart queue reverb
 
-queue-stop: ## Stop queue worker
-	docker compose stop queue
+scheduler: ## Start scheduler (profile, as on prod)
+	docker compose --profile scheduler up -d scheduler
 
-queue-restart: ## Restart queue worker
-	docker compose restart queue
+scheduler-stop: ## Stop scheduler
+	docker compose --profile scheduler stop scheduler
 
 ## —— Testing ——
 test: ## Run tests
@@ -101,10 +101,10 @@ test-filter: ## Run filtered tests (use: make test-filter f="TestName")
 
 ## —— Setup ——
 setup: ## Initial project setup
+	@make copy-env
 	@make build
 	@make up
 	@make install
-	@make copy-env
 	@make key-generate
 	@make migrate
 	@echo "$(GREEN)Setup completed!$(RESET)"
@@ -119,17 +119,17 @@ copy-env: ## Copy .env.docker or .env.example to .env
 	fi
 
 key-generate: ## Generate application key
-	docker compose run --rm artisan key:generate
+	docker compose exec php php artisan key:generate
 
 ide-helper: ## Generate IDE helper files
-	docker compose run --rm artisan ide-helper:generate
+	docker compose exec php php artisan ide-helper:generate
 
 ## —— Database ——
 db-dump: ## Dump database to backup.sql
-	docker compose exec mysql mysqldump -u root -p$${DB_ROOT_PASSWORD:-root} $${DB_DATABASE:-fitness} > backup.sql
+	docker compose exec -T db mariadb-dump -u root -p$${DB_ROOT_PASSWORD:-root} --single-transaction --routines --triggers $${DB_DATABASE:-fitness} > backup.sql
 
 db-restore: ## Restore database from backup.sql
-	docker compose exec -T mysql mysql -u root -p$${DB_ROOT_PASSWORD:-root} $${DB_DATABASE:-fitness} < backup.sql
+	docker compose exec -T db mariadb -u root -p$${DB_ROOT_PASSWORD:-root} $${DB_DATABASE:-fitness} < backup.sql
 
 ## —— Helpers ——
 permissions: ## Fix storage permissions
