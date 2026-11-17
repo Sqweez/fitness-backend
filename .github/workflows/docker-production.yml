@@ -63,8 +63,8 @@ jobs:
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Upload compose file
-        run: scp compose.production.yml "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$APP_DIR/compose.production.yml"
+      - name: Upload compose file and Makefile
+        run: scp compose.production.yml Makefile "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$APP_DIR/"
 
       - name: Pull and restart containers
         run: |
