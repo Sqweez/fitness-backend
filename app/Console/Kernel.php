@@ -4,6 +4,7 @@ namespace App\Console;
 
 use App\Console\Commands\DestroyUserClubs;
 use App\Console\Commands\FinishClientSessions;
+use App\Console\Commands\RevokeStaffTokens;
 use App\Console\Commands\Utils\CollectHasActiveProgramsClients;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -21,6 +22,7 @@ class Kernel extends ConsoleKernel
         $schedule->command(FinishClientSessions::class)->dailyAt('00:00');
         $schedule->command(DestroyUserClubs::class)->dailyAt('00:00');
         $schedule->command(CollectHasActiveProgramsClients::class)->dailyAt('00:05');
+        $schedule->command(RevokeStaffTokens::class)->dailyAt('03:00');
     }
 
     /**
