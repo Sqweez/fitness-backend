@@ -189,7 +189,8 @@ paths:
       description: |
         Возвращает имя и фамилию владельца мобильного токена.
         Фамилия — первое слово существующего поля name, имя — второе.
-        Отчество не включается. ID клиента передавать не требуется.
+        Отчество не включается. Если в name одно слово, оно возвращается как first_name,
+        а last_name — пустая строка. ID клиента передавать не требуется.
       operationId: getMyProfile
       security:
         - BearerAuth: []
@@ -580,7 +581,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '404':
-          description: Привязанный к клиенту клуб не найден
+          description: Привязанный к клиенту клуб не найден (NOT_FOUND)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '429':
           description: Превышен общий API-лимит запросов
           content:
@@ -983,6 +988,7 @@ components:
         last_name:
           type: string
           example: Иванов
+          description: Пустая строка, если в имени клиента одно слово
 
     ErrorCode:
       type: string
@@ -996,6 +1002,8 @@ components:
         - RATE_LIMITED
         - UNAUTHORIZED
         - PASS_UNAVAILABLE
+        - NOT_FOUND
+        - FORBIDDEN
 
     SendCodeRequest:
       type: object

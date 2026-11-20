@@ -7,6 +7,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -58,6 +59,13 @@ class Handler extends ExceptionHandler
                     'message' => 'Слишком много запросов. Попробуйте позже',
                     'retry_after_seconds' => $retryAfter,
                 ]], 429)->header('Retry-After', $retryAfter);
+            }
+            $httpException = $this->prepareException($e);
+            if ($httpException instanceof HttpExceptionInterface && $httpException->getStatusCode() === 404) {
+                return response()->json(['error' => ['code' => 'NOT_FOUND', 'message' => 'Не найдено']], 404);
+            }
+            if ($httpException instanceof HttpExceptionInterface && $httpException->getStatusCode() === 403) {
+                return response()->json(['error' => ['code' => 'FORBIDDEN', 'message' => 'Доступ запрещён']], 403);
             }
         }
         if ($e instanceof ValidationException)
