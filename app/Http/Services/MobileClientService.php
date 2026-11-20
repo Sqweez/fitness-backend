@@ -19,10 +19,11 @@ class MobileClientService
 
         // A single-word name has no surname: show it as the first name for the greeting
         if (count($name) === 1) {
-            return ['first_name' => $name[0], 'last_name' => ''];
+            return ['id' => $client->id, 'first_name' => $name[0], 'last_name' => ''];
         }
 
         return [
+            'id' => $client->id,
             'first_name' => $name[1],
             'last_name' => $name[0],
         ];

@@ -1168,9 +1168,14 @@ components:
     ClientProfile:
       type: object
       required:
+        - id
         - first_name
         - last_name
       properties:
+        id:
+          type: string
+          example: '42'
+          description: ID клиента; канал чата — private-chat.client.{id}
         first_name:
           type: string
           example: Алексей

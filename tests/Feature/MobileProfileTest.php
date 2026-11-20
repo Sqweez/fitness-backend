@@ -28,7 +28,7 @@ class MobileProfileTest extends TestCase
     public function test_profile_returns_first_and_last_name(string $name, array $expected): void {
         $client = Client::create(['name' => $name]);
         $token = $client->createToken('mobile')->plainTextToken;
-        $this->withToken($token)->getJson('/api/mobile/v1/me')->assertOk()->assertExactJson(['data' => $expected]);
+        $this->withToken($token)->getJson('/api/mobile/v1/me')->assertOk()->assertExactJson(['data' => ['id' => (string) $client->id] + $expected]);
     }
 
     public static function names(): array {
@@ -50,6 +50,6 @@ class MobileProfileTest extends TestCase
         $otherClient = Client::create(['name' => 'Петров Иван Петрович']);
         $token = $client->createToken('mobile')->plainTextToken;
         $this->withToken($token)->getJson('/api/mobile/v1/me?client_id=' . $otherClient->id)
-            ->assertOk()->assertExactJson(['data' => ['first_name' => 'Алексей', 'last_name' => 'Иванов']]);
+            ->assertOk()->assertExactJson(['data' => ['id' => (string) $client->id, 'first_name' => 'Алексей', 'last_name' => 'Иванов']]);
     }
 }
