@@ -37,7 +37,9 @@ class ChatService
      * @return ChatMessage Existing message when the client_message_id was already used
      */
     public function sendClientMessage(Client $client, string $text, string $clientMessageId): ChatMessage {
-        $chat = Chat::query()->createOrFirst(['client_id' => $client->id]);
+        // Insert only for the first message; createOrFirst alone would attempt (and fail) an insert every time
+        $chat = Chat::query()->where('client_id', $client->id)->first()
+            ?? Chat::query()->createOrFirst(['client_id' => $client->id]);
         return $this->send($chat, null, $text, $clientMessageId);
     }
 
@@ -78,7 +80,7 @@ class ChatService
             ->when($cursor > 0, function (Builder $query) use ($cursor) {
                 $query->where('last_message_id', '<', $cursor);
             })
-            ->with(['client', 'lastMessage.user'])
+            ->with(['client.media', 'lastMessage.user'])
             ->withCount(['messages as unread_count' => function (Builder $query) {
                 $query->whereNull('user_id')
                     ->whereRaw('chat_messages.id > COALESCE(chats.staff_last_read_message_id, 0)');

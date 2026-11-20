@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs ps shell shell-db artisan composer migrate migrate-fresh seed rollback tinker route-list install update dump cache-clear cache optimize queue-restart scheduler scheduler-stop test test-filter setup copy-env key-generate ide-helper db-dump db-restore permissions
+.PHONY: help build up down restart logs ps shell shell-db artisan composer migrate migrate-fresh seed rollback tinker route-list chat chat-new install update dump cache-clear cache optimize queue-restart scheduler scheduler-stop test test-filter setup copy-env key-generate ide-helper db-dump db-restore permissions
 
 # Colors
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -58,6 +58,12 @@ rollback: ## Rollback last migration
 
 tinker: ## Run Laravel Tinker
 	$(COMPOSE) exec php php artisan tinker
+
+chat: ## Send a chat message as a client (use: make chat client=806 text="Привет")
+	$(COMPOSE) exec php php artisan chat:client-message $(if $(client),--client=$(client)) $(if $(text),--text="$(text)")
+
+chat-new: ## Open a new chat from a random client without one
+	$(COMPOSE) exec php php artisan chat:client-message --new $(if $(text),--text="$(text)")
 
 route-list: ## Show all routes
 	$(COMPOSE) exec php php artisan route:list

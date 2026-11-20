@@ -14,6 +14,7 @@ class ChatClientResource extends JsonResource
             'name' => $this->name,
             'phone' => $this->phone,
             'club_id' => (string) $this->club_id,
+            'photo' => $this->getFirstMedia(Client::MEDIA_AVATAR)?->getUrl(),
         ];
     }
 }
