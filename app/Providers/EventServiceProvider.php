@@ -7,6 +7,7 @@ use App\Events\Chat\ChatRead;
 use App\Listeners\Chat\BroadcastChatMessage;
 use App\Listeners\Chat\BroadcastChatRead;
 use App\Listeners\Chat\SendChatMessagePush;
+use App\Listeners\Chat\SendChatMessageWebPush;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -26,6 +27,7 @@ class EventServiceProvider extends ServiceProvider
         ChatMessageSent::class => [
             BroadcastChatMessage::class,
             SendChatMessagePush::class,
+            SendChatMessageWebPush::class,
         ],
         ChatRead::class => [
             BroadcastChatRead::class,

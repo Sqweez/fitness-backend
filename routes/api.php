@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\{ChatController,
     TrainerController,
     UserController,
     UserReportController,
+    WebPushController,
     WithDrawalController};
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,12 @@ Route::group([
             Route::post('{chat}/messages', [ChatController::class, 'send']);
             Route::post('{chat}/read', [ChatController::class, 'read']);
         });
+    });
+
+    Route::group(['prefix' => 'web-push', 'middleware' => 'can:manage-chats'], function () {
+        Route::get('config', [WebPushController::class, 'config']);
+        Route::post('subscriptions', [WebPushController::class, 'subscribe']);
+        Route::delete('subscriptions', [WebPushController::class, 'unsubscribe']);
     });
 
     Route::group(['middleware' => 'can:manage-trainers'], function () {
