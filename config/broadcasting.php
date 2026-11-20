@@ -40,6 +40,8 @@ return [
                 'port' => env('REVERB_PORT', 443),
                 'scheme' => env('REVERB_SCHEME', 'https'),
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                // Chat events are broadcast inside the request; a hung Reverb must not stall it (default is 30s)
+                'timeout' => 2,
             ],
             'client_options' => [],
         ],

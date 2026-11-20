@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Role;
+use App\Models\Chat;
 use App\Models\Club;
 use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -42,6 +43,18 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('manage-mobile-config', function (User $user) {
             return $user->roles->contains('id', Role::ROLE_BOSS)
                 || $user->roles->contains('id', Role::ROLE_ADMIN);
+        });
+
+        Gate::define('manage-chats', function (User $user) {
+            return $user->roles->contains('id', Role::ROLE_BOSS)
+                || $user->roles->contains('id', Role::ROLE_ADMIN);
+        });
+
+        Gate::define('access-chat', function (User $user, Chat $chat) {
+            // A chat of a deleted client has no club to check access against
+            return Gate::forUser($user)->allows('manage-chats')
+                && $chat->client !== null
+                && $user->clubs()->whereKey($chat->client->club_id)->exists();
         });
 
         Gate::define('manage-club', function (User $user, Club $club) {

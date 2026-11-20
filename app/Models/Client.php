@@ -221,6 +221,14 @@ class Client extends Authenticatable implements HasMedia
             ->latest();
     }
 
+    public function chat(): HasOne {
+        return $this->hasOne(Chat::class);
+    }
+
+    public function pushDevices(): HasMany {
+        return $this->hasMany(PushDevice::class);
+    }
+
     public function sessions(): HasMany {
         return $this->hasMany(Session::class)->orderByDesc('id');
     }

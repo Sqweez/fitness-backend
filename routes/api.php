@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V2\EconomyReportController;
-use App\Http\Controllers\Api\V1\{ClientBookmarkController,
+use App\Http\Controllers\Api\V1\{ChatController,
+    ClientBookmarkController,
     ClientController,
     ClubController,
     DashboardController,
@@ -30,6 +31,16 @@ Route::group([
     Route::group(['prefix' => 'mobile/config', 'middleware' => 'can:manage-mobile-config'], function () {
         Route::get('/', [MobileConfigController::class, 'show']);
         Route::patch('/', [MobileConfigController::class, 'update']);
+    });
+
+    Route::group(['prefix' => 'chats', 'middleware' => 'can:manage-chats'], function () {
+        Route::get('/', [ChatController::class, 'index']);
+        Route::get('unread', [ChatController::class, 'unread']);
+        Route::group(['middleware' => 'can:access-chat,chat'], function () {
+            Route::get('{chat}/messages', [ChatController::class, 'messages']);
+            Route::post('{chat}/messages', [ChatController::class, 'send']);
+            Route::post('{chat}/read', [ChatController::class, 'read']);
+        });
     });
 
     Route::group(['middleware' => 'can:manage-trainers'], function () {

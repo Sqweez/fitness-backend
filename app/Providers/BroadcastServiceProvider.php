@@ -14,7 +14,8 @@ class BroadcastServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        Broadcast::routes();
+        // Both client (mobile) and staff Sanctum tokens may authorize private channels
+        Broadcast::routes(['prefix' => 'api', 'middleware' => ['auth:mobile,api']]);
 
         require base_path('routes/channels.php');
     }

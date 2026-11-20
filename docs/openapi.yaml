@@ -593,6 +593,195 @@ paths:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
 
+  /me/chat/messages:
+    get:
+      summary: История чата с клубом
+      description: |
+        Страница содержит последние limit сообщений до курсора, от старых к новым.
+        cursor=0 — самые новые сообщения. next_cursor — ID самого старого сообщения страницы
+        для загрузки более ранних, null, если их нет. Без диалога возвращается пустой список.
+      operationId: getChatMessages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+        - name: cursor
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Страница сообщений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessagesResponse'
+        '401':
+          description: Необходим мобильный токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Ошибка входных данных (VALIDATION_ERROR)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Отправить сообщение в чат
+      description: |
+        Диалог создаётся при первом сообщении. Повтор с тем же client_message_id
+        возвращает 200 с уже сохранённым сообщением без дубля.
+      operationId: sendChatMessage
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendChatMessageRequest'
+      responses:
+        '201':
+          description: Сообщение сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessageResponse'
+        '200':
+          description: Повтор запроса — то же сообщение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessageResponse'
+        '401':
+          description: Необходим мобильный токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Ошибка входных данных (VALIDATION_ERROR)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /me/chat/unread:
+    get:
+      summary: Число непрочитанных сообщений от сотрудников
+      operationId: getChatUnread
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Счётчик непрочитанных
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [count]
+                    properties:
+                      count:
+                        type: integer
+                        example: 2
+        '401':
+          description: Необходим мобильный токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /me/chat/read:
+    post:
+      summary: Отметить сообщения прочитанными
+      description: |
+        Отмечает прочитанными сообщения до указанного включительно. Указатель только сдвигается вперёд.
+        ID должен принадлежать диалогу клиента.
+      operationId: markChatRead
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [last_read_message_id]
+              properties:
+                last_read_message_id:
+                  type: string
+                  example: '125'
+      responses:
+        '204':
+          description: Отмечено
+        '401':
+          description: Необходим мобильный токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Ошибка входных данных (VALIDATION_ERROR)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /me/push-token:
+    post:
+      summary: Зарегистрировать токен устройства для пушей
+      description: |
+        Вызывается после входа и при обновлении токена провайдером. Токен привязан к текущей
+        сессии и удаляется при выходе. Тот же токен другого клиента переходит текущему.
+      operationId: registerPushToken
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token:
+                  type: string
+                  maxLength: 512
+                platform:
+                  type: string
+                  enum: [ios, android]
+      responses:
+        '204':
+          description: Токен сохранён
+        '401':
+          description: Необходим мобильный токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Ошибка входных данных (VALIDATION_ERROR)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+
 components:
   securitySchemes:
     BearerAuth:
@@ -989,6 +1178,74 @@ components:
           type: string
           example: Иванов
           description: Пустая строка, если в имени клиента одно слово
+
+    ChatMessage:
+      type: object
+      required: [id, direction, text, author_name, sent_at]
+      properties:
+        id:
+          type: string
+          example: '125'
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: incoming — от сотрудника, outgoing — от клиента
+        text:
+          type: string
+          maxLength: 2000
+        author_name:
+          type: string
+          nullable: true
+          example: Анна
+          description: Имя сотрудника; null для сообщений клиента
+        sent_at:
+          type: string
+          format: date-time
+          example: '2026-10-22T17:00:00+05:00'
+
+    ChatMessageResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ChatMessage'
+
+    ChatMessagesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [items, next_cursor, staff_last_read_message_id]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChatMessage'
+            next_cursor:
+              type: integer
+              format: int64
+              nullable: true
+            staff_last_read_message_id:
+              type: string
+              nullable: true
+              example: '125'
+              description: |
+                До какого сообщения диалог прочитан сотрудниками клуба. Сообщение клиента
+                прочитано, если его ID численно не больше этого значения (галочки).
+
+    SendChatMessageRequest:
+      type: object
+      required: [text, client_message_id]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        client_message_id:
+          type: string
+          maxLength: 64
+          description: Уникальный в пределах диалога ID (рекомендуется UUID)
 
     ErrorCode:
       type: string

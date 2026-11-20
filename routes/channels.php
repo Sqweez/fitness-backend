@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Client;
+use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Gate;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,4 +18,13 @@ use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
-});
+}, ['guards' => ['api']]);
+
+Broadcast::channel('chat.client.{clientId}', function (Client $client, $clientId) {
+    return $client->id === (int) $clientId;
+}, ['guards' => ['mobile']]);
+
+Broadcast::channel('chat.club.{clubId}', function (User $user, $clubId) {
+    return Gate::forUser($user)->allows('manage-chats')
+        && $user->clubs()->whereKey((int) $clubId)->exists();
+}, ['guards' => ['api']]);

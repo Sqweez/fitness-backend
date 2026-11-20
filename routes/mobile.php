@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\Mobile\V1\AuthController;
+use App\Http\Controllers\Mobile\V1\ChatController;
 use App\Http\Controllers\Mobile\V1\ClientController;
 use App\Http\Controllers\Mobile\V1\ClubController;
 use App\Http\Controllers\Mobile\V1\ConfigController;
 use App\Http\Controllers\Mobile\V1\DocsController;
+use App\Http\Controllers\Mobile\V1\PushTokenController;
 use App\Http\Controllers\Mobile\V1\TrainerController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,6 +37,13 @@ Route::group(['prefix' => 'mobile/v1'], function () {
             Route::get('trinket', [ClientController::class, 'trinket']);
             Route::get('pass', [ClientController::class, 'pass']);
             Route::get('visits', [ClientController::class, 'visits']);
+            Route::post('push-token', [PushTokenController::class, 'store']);
+            Route::group(['prefix' => 'chat'], function () {
+                Route::get('messages', [ChatController::class, 'messages']);
+                Route::post('messages', [ChatController::class, 'send']);
+                Route::get('unread', [ChatController::class, 'unread']);
+                Route::post('read', [ChatController::class, 'read']);
+            });
         });
     });
 });
