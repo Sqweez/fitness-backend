@@ -47,7 +47,7 @@ services:
     container_name: fitness-db
     restart: unless-stopped
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_FORWARD_PORT:-3306}:3306"
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-fitness}
       MYSQL_USER: ${DB_USERNAME:-fitness}
