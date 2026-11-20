@@ -15,6 +15,7 @@ class ChatMessageResource extends JsonResource
             'text' => $this->text,
             'author_name' => $this->user?->name,
             'sent_at' => $this->created_at->toIso8601String(),
+            'client_message_id' => $this->client_message_id,
         ];
     }
 }

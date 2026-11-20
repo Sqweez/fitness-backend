@@ -1186,7 +1186,7 @@ components:
 
     ChatMessage:
       type: object
-      required: [id, direction, text, author_name, sent_at]
+      required: [id, direction, text, author_name, sent_at, client_message_id]
       properties:
         id:
           type: string
@@ -1207,6 +1207,10 @@ components:
           type: string
           format: date-time
           example: '2026-10-22T17:00:00+05:00'
+        client_message_id:
+          type: string
+          example: 8f14e45f-ceea-467f-a0e6-2c5c9a1c6d3b
+          description: ID, переданный автором при отправке; по нему приложение сопоставляет локальное сообщение «Отправка…»
 
     ChatMessageResponse:
       type: object
