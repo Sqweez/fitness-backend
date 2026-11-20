@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Events\Chat\ChatMessageSent;
+use App\Events\Chat\ChatRead;
+use App\Listeners\Chat\BroadcastChatMessage;
+use App\Listeners\Chat\BroadcastChatRead;
 use App\Listeners\Chat\SendChatMessagePush;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -21,7 +24,11 @@ class EventServiceProvider extends ServiceProvider
             SendEmailVerificationNotification::class,
         ],
         ChatMessageSent::class => [
+            BroadcastChatMessage::class,
             SendChatMessagePush::class,
+        ],
+        ChatRead::class => [
+            BroadcastChatRead::class,
         ],
     ];
 

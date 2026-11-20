@@ -34,19 +34,6 @@ class ChatService
     }
 
     /**
-     * Read state of both sides: unread counters and read pointers (read receipts).
-     */
-    public function getReadState(Chat $chat): array {
-        return [
-            'chat_id' => (string) $chat->id,
-            'client_unread_count' => $this->getClientUnreadCount($chat),
-            'staff_unread_count' => $this->getStaffUnreadCount($chat),
-            'client_last_read_message_id' => $this->formatMessageId($chat->client_last_read_message_id),
-            'staff_last_read_message_id' => $this->formatMessageId($chat->staff_last_read_message_id),
-        ];
-    }
-
-    /**
      * @return ChatMessage Existing message when the client_message_id was already used
      */
     public function sendClientMessage(Client $client, string $text, string $clientMessageId): ChatMessage {
@@ -170,10 +157,6 @@ class ChatService
 
             ChatRead::dispatch($chat);
         });
-    }
-
-    private function formatMessageId(?int $id): ?string {
-        return $id === null ? null : (string) $id;
     }
 
     private function staffClubIds(User $user): array {
